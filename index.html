@@ -392,13 +392,22 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
     </div>
 
     <div id="loginSection" style="display:none;">
-      <p class="config-sub">Informe seu nome para entrar no sistema.</p>
-      <div class="config-section">Quem é você?</div>
-      <select id="loginVendedor" style="width:100%;margin-bottom:10px;">
-        <option value="">Carregando...</option>
-      </select>
+      <div id="loginExistingDiv">
+        <p class="config-sub">Selecione seu nome e informe sua senha.</p>
+        <div class="config-section">Quem é você?</div>
+        <select id="loginVendedor" style="width:100%;margin-bottom:10px;" onchange="onVendedorSelect()">
+          <option value="">Selecione seu nome...</option>
+        </select>
+        <input type="password" id="loginSenha" placeholder="Sua senha" style="width:100%;margin-bottom:10px;" onkeydown="if(event.key==='Enter')doLogin()"/>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">Entrar →</button>
+        <div style="text-align:center;margin-top:10px;">
+          <span style="font-size:12px;color:var(--muted);cursor:pointer;" onclick="toggleNewUser()">+ Primeiro acesso / novo vendedor</span>
+        </div>
+      </div>
       <div id="loginNewDiv" style="display:none;">
-        <input type="text" id="loginNome" placeholder="Seu nome completo" style="margin-bottom:10px;"/>
+        <p class="config-sub">Cadastre-se para acessar o sistema.</p>
+        <div class="config-section">Novo Cadastro</div>
+        <input type="text" id="loginNome" placeholder="Seu nome completo" style="margin-bottom:10px;width:100%;"/>
         <div class="config-row">
           <select id="loginLoja">
             <option value="">Loja...</option>
@@ -411,15 +420,70 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
             <option value="gestor">Gestor</option>
           </select>
         </div>
-        <input type="number" id="loginMeta" placeholder="Meta mensal (nº de vendas)" style="margin-bottom:10px;"/>
-      </div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">Entrar →</button>
-      <div style="text-align:center;margin-top:10px;">
-        <span style="font-size:12px;color:var(--muted);cursor:pointer;" onclick="toggleNewUser()">+ Primeiro acesso / novo vendedor</span>
+        <input type="number" id="loginMeta" placeholder="Meta mensal (nº de vendas)" style="margin-bottom:10px;width:100%;"/>
+        <input type="password" id="loginNovaSenha" placeholder="Crie uma senha" style="margin-bottom:6px;width:100%;"/>
+        <input type="password" id="loginConfSenha" placeholder="Confirme a senha" style="margin-bottom:10px;width:100%;"/>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doCadastro()">Cadastrar →</button>
+        <div style="text-align:center;margin-top:10px;">
+          <span style="font-size:12px;color:var(--muted);cursor:pointer;" onclick="toggleNewUser()">← Voltar ao login</span>
+        </div>
       </div>
       <div style="text-align:center;margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
         <span style="font-size:11px;color:var(--muted);cursor:pointer;" onclick="showSetup()">⚙ Reconfigurar Supabase</span>
       </div>
+    </div>
+  </div>
+
+  <!-- EQUIPE & METAS VIEW -->
+  <div class="view" id="view-equipe">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--navy);">Equipe &amp; Metas</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Gerencie vendedores e defina metas mensais individualmente</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadEquipe()">&#8635; Atualizar</button>
+    </div>
+    <div style="background:var(--surface);border-radius:14px;box-shadow:var(--sh);overflow:hidden;">
+      <table class="all-table">
+        <thead><tr>
+          <th>Vendedor</th><th>Loja</th><th>Meta Mensal</th><th>Vendas</th><th>% Meta</th><th>Total Leads</th><th>Conversao</th><th>Acoes</th>
+        </tr></thead>
+        <tbody id="equipeTbody"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">Clique em Atualizar para carregar</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL VENDEDOR -->
+<div class="overlay" id="vendedorOverlay" onclick="if(event.target===this)closeVendedor()">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-hd">
+      <div class="modal-title">Editar Vendedor</div>
+      <button class="modal-close" onclick="closeVendedor()">&#215;</button>
+    </div>
+    <div class="modal-body">
+      <div class="fgroup"><label>Nome</label><input type="text" id="vNome" disabled style="background:#f5f7fc;color:var(--muted);"/></div>
+      <div class="form-row">
+        <div class="fgroup">
+          <label>Loja</label>
+          <select id="vLoja">
+            <option value="">&#8212;</option>
+            <option>Boa Vista</option><option>Shopping SL</option><option>Assai Minas</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label>Meta Mensal (vendas)</label>
+          <input type="number" id="vMeta" min="1" max="999" placeholder="Ex: 15"/>
+        </div>
+      </div>
+      <div style="background:#FFF8E1;border-radius:9px;padding:12px;font-size:12px;color:#7D5A00;border-left:3px solid var(--yellow);margin-top:4px;">
+        A meta define o numero de vendas fechadas que o vendedor deve atingir no mes.
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeVendedor()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveVendedor()">Salvar</button>
     </div>
   </div>
 </div>
@@ -708,7 +772,7 @@ async function showLoginSection() {
 
 async function loadVendedores() {
   const sel = document.getElementById('loginVendedor');
-  sel.innerHTML = '<option value="">Carregando...</option>';
+  sel.innerHTML = '<option value="">Selecione seu nome...</option>';
   try {
     const { data } = await sb.from('vendedores').select('*').order('nome');
     allVendedores = data || [];
@@ -719,30 +783,78 @@ async function loadVendedores() {
   }
 }
 
+// toggleNewUser defined above
+
+// Simple hash function for password
+async function hashSenha(senha) {
+  const msgBuffer = new TextEncoder().encode(senha);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function onVendedorSelect() {
+  const senha = document.getElementById('loginSenha');
+  if (senha) senha.value = '';
+}
+
 function toggleNewUser() {
-  const d = document.getElementById('loginNewDiv');
-  d.style.display = d.style.display === 'none' ? '' : 'none';
+  const nd = document.getElementById('loginNewDiv');
+  const ed = document.getElementById('loginExistingDiv');
+  const showing = nd.style.display !== 'none';
+  nd.style.display = showing ? 'none' : '';
+  ed.style.display = showing ? '' : 'none';
 }
 
 async function doLogin() {
   const selId = document.getElementById('loginVendedor').value;
-  const newName = document.getElementById('loginNome').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  if (!selId) { toast('Selecione seu nome','error'); return; }
+  if (!senha) { toast('Informe sua senha','error'); return; }
 
-  if (selId) {
-    currentUser = allVendedores.find(v=>v.id===selId);
-  } else if (newName) {
-    const loja = document.getElementById('loginLoja').value;
-    const role = document.getElementById('loginRole').value;
-    const meta = parseInt(document.getElementById('loginMeta').value)||10;
-    const { data, error } = await sb.from('vendedores').insert({ nome:newName, loja, meta_mensal:meta, email: newName.toLowerCase().replace(/\s+/g,'.')+'.'+Date.now()+'@cvm.local' }).select().single();
-    if (error) { toast('Erro ao criar usuário','error'); return; }
-    currentUser = { ...data, role };
-  } else {
-    toast('Selecione seu nome ou cadastre-se','error'); return;
+  const vendedor = allVendedores.find(v=>v.id===selId);
+  if (!vendedor) { toast('Usuário não encontrado','error'); return; }
+
+  // Check if user has no password yet (first login after migration)
+  if (!vendedor.senha_hash) {
+    toast('Conta sem senha — use Primeiro Acesso para definir sua senha','error');
+    return;
   }
 
+  const hash = await hashSenha(senha);
+  if (hash !== vendedor.senha_hash) {
+    toast('Senha incorreta','error');
+    return;
+  }
+
+  currentUser = vendedor;
   localStorage.setItem('cvm_user_id', currentUser.id);
   enterApp();
+}
+
+async function doCadastro() {
+  const nome = document.getElementById('loginNome').value.trim();
+  const loja = document.getElementById('loginLoja').value;
+  const role = document.getElementById('loginRole').value;
+  const meta = parseInt(document.getElementById('loginMeta').value)||10;
+  const senha = document.getElementById('loginNovaSenha').value;
+  const conf  = document.getElementById('loginConfSenha').value;
+
+  if (!nome) { toast('Informe seu nome','error'); return; }
+  if (!senha || senha.length < 4) { toast('Senha deve ter pelo menos 4 caracteres','error'); return; }
+  if (senha !== conf) { toast('As senhas não coincidem','error'); return; }
+
+  const hash = await hashSenha(senha);
+  const email = nome.toLowerCase().replace(/\s+/g,'.') + '.' + Date.now() + '@cvm.local';
+  const { data, error } = await sb.from('vendedores')
+    .insert({ nome, loja, meta_mensal:meta, email, senha_hash: hash })
+    .select().single();
+
+  if (error) { toast('Erro ao cadastrar: '+error.message,'error'); return; }
+  currentUser = { ...data, role };
+  localStorage.setItem('cvm_user_id', currentUser.id);
+  toast('Cadastro realizado!','success');
+  setTimeout(()=>enterApp(), 500);
 }
 
 async function enterApp() {
@@ -1211,120 +1323,4 @@ function renderHist(hist) {
     ? [...hist].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
         .map(h=>`<div class="hist-item"><div class="hist-time">${fmtDatetime(h.created_at)}</div>${esc(h.texto)}</div>`)
         .join('')
-    : '<div style="font-size:12px;color:var(--muted);">Nenhuma interação ainda.</div>';
-  document.getElementById('histNew').value='';
-}
-
-async function addHist() {
-  const txt = document.getElementById('histNew').value.trim();
-  if (!txt || !editingLeadId) return;
-  const { error } = await sb.from('historico').insert({lead_id:editingLeadId, vendedor_id:currentUser.id, texto:txt});
-  if (error) { toast('Erro ao salvar nota','error'); return; }
-  toast('Nota salva!','success');
-  document.getElementById('histNew').value='';
-  // reload hist
-  const { data } = await sb.from('historico').select('*').eq('lead_id', editingLeadId).order('created_at',{ascending:false});
-  renderHist(data||[]);
-  // update local
-  const l = myLeads.find(x=>x.id===editingLeadId);
-  if (l) l.historico = data;
-}
-
-
-// ── EQUIPE & METAS ────────────────────────────────────────────────
-let editingVendedorId = null;
-
-async function loadEquipe() {
-  document.getElementById('equipeTbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">Carregando...</td></tr>';
-  await loadVendedores();
-  await loadAllLeads();
-  renderEquipe();
-}
-
-function renderEquipe() {
-  const hoje = new Date();
-  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-
-  const rows = allVendedores.map(v => {
-    const vLeads = allLeads.filter(l => l.vendedor_id === v.id);
-    const vendasMes = vLeads.filter(l => l.etapa === 'venda' && new Date(l.updated_at) >= inicioMes).length;
-    const totalLeads = vLeads.length;
-    const conv = totalLeads ? Math.round(vLeads.filter(l=>l.etapa==='venda').length / totalLeads * 100) : 0;
-    const meta = v.meta_mensal || 10;
-    const pct = Math.min(Math.round(vendasMes / meta * 100), 100);
-    const color = pct >= 100 ? '#018a6b' : pct >= 60 ? 'var(--teal)' : pct >= 30 ? 'var(--orange)' : 'var(--red)';
-
-    return `<tr>
-      <td><strong>${esc(v.nome)}</strong></td>
-      <td>${esc(v.loja || '—')}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--navy);">${meta}</span>
-          <button class="btn btn-ghost btn-sm" onclick="openVendedor('${v.id}')" style="padding:3px 8px;font-size:11px;">Editar</button>
-        </div>
-      </td>
-      <td style="font-family:'DM Mono',monospace;font-weight:700;color:${color};">${vendasMes}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:80px;background:var(--bg);border-radius:20px;height:7px;overflow:hidden;">
-            <div style="width:${pct}%;height:100%;border-radius:20px;background:${color};transition:width .6s;"></div>
-          </div>
-          <span style="font-size:11px;font-weight:700;color:${color};">${pct}%</span>
-        </div>
-      </td>
-      <td style="font-family:'DM Mono',monospace;">${totalLeads}</td>
-      <td style="font-weight:700;color:${conv>=20?'#018a6b':conv>=10?'var(--teal)':'var(--muted)'};">${conv}%</td>
-      <td><button class="btn btn-primary btn-sm" onclick="openVendedor('${v.id}')">Definir Meta</button></td>
-    </tr>`;
-  }).join('');
-
-  document.getElementById('equipeTbody').innerHTML = rows ||
-    '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">Nenhum vendedor cadastrado</td></tr>';
-}
-
-function openVendedor(id) {
-  editingVendedorId = id;
-  const v = allVendedores.find(x => x.id === id);
-  if (!v) return;
-  document.getElementById('vNome').value = v.nome || '';
-  document.getElementById('vLoja').value = v.loja || '';
-  document.getElementById('vMeta').value = v.meta_mensal || 10;
-  document.getElementById('vendedorOverlay').classList.add('open');
-}
-
-function closeVendedor() {
-  document.getElementById('vendedorOverlay').classList.remove('open');
-  editingVendedorId = null;
-}
-
-async function saveVendedor() {
-  if (!editingVendedorId) return;
-  const loja = document.getElementById('vLoja').value;
-  const meta = parseInt(document.getElementById('vMeta').value) || 10;
-  const { error } = await sb.from('vendedores').update({ loja, meta_mensal: meta }).eq('id', editingVendedorId);
-  if (error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
-  // update local
-  const v = allVendedores.find(x => x.id === editingVendedorId);
-  if (v) { v.loja = loja; v.meta_mensal = meta; }
-  toast('Meta atualizada com sucesso!', 'success');
-  closeVendedor();
-  renderEquipe();
-  renderDashboard();
-}
-
-// ── HELPERS ───────────────────────────────────────────────────────
-function daysSince(ts){ return Math.floor((Date.now()-new Date(ts).getTime())/86400000); }
-function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function fmtNum(n){ return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}); }
-function fmtDatetime(ts){ return new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }
-
-function toast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (type?' '+type:'');
-  clearTimeout(t._to);
-  t._to = setTimeout(()=>t.classList.remove('show'), 2500);
-}
-</script>
-</body>
-</html>
+    : '<div style="font-size:12px;color:var(-
