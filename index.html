@@ -29,8 +29,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .topbar-right{display:flex;align-items:center;gap:10px;}
 .user-pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.1);border-radius:20px;padding:5px 12px 5px 8px;font-size:12px;color:#fff;font-weight:600;cursor:pointer;}
 .user-avatar{width:24px;height:24px;border-radius:50%;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;font-family:'Syne',sans-serif;}
-.tabs{background:var(--navy2);display:flex;padding:0 20px;border-bottom:2px solid rgba(255,255,255,.06);}
-.tab{padding:10px 20px;font-size:13px;font-weight:600;color:#7ea8cc;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;user-select:none;}
+.tabs{background:var(--navy2);display:flex;padding:0 20px;border-bottom:2px solid rgba(255,255,255,.06);overflow-x:auto;}
+.tab{padding:10px 18px;font-size:13px;font-weight:600;color:#7ea8cc;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;user-select:none;white-space:nowrap;}
 .tab:hover{color:#fff;}
 .tab.active{color:var(--mint);border-bottom-color:var(--mint);}
 .tab.manager-only{display:none;}
@@ -39,11 +39,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .view.active{display:block;}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:9px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all .15s;}
 .btn-primary{background:var(--teal);color:#fff;}
-.btn-primary:hover{background:#016f7e;transform:translateY(-1px);}
+.btn-primary:hover{background:#016f7e;}
 .btn-danger{background:#fdecea;color:var(--red);border:1.5px solid #f5b4b2;}
+.btn-success{background:#e8fff9;color:#018a6b;border:1.5px solid #a8e6d4;}
+.btn-warning{background:#FFF8E1;color:#7D5A00;border:1.5px solid #f9c74f;}
 .btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--muted);}
 .btn-ghost:hover{border-color:var(--teal);color:var(--teal);}
-.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-sm{padding:5px 10px;font-size:11px;}
 .kpi-strip{display:grid;gap:12px;margin-bottom:18px;}
 .kpi-strip.cols-5{grid-template-columns:repeat(5,1fr);}
 .kpi-strip.cols-4{grid-template-columns:repeat(4,1fr);}
@@ -51,6 +53,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .kpi-card.red{border-top-color:var(--red);}
 .kpi-card.orange{border-top-color:var(--orange);}
 .kpi-card.green{border-top-color:var(--mint);}
+.kpi-card.yellow{border-top-color:var(--yellow);}
 .kpi-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--navy);line-height:1;}
 .kpi-card.red .kpi-val{color:var(--red);}
 .kpi-card.orange .kpi-val{color:#d4782a;}
@@ -143,11 +146,21 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
 .all-table tr:hover td{background:#F5F8FF;cursor:pointer;}
 .all-table tr.urgent td{background:#FFF5F5;}
 .pill-stage{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
+.badge-ativo{background:#e8fff9;color:#018a6b;}
+.badge-pendente{background:#FFF8E1;color:#7D5A00;}
+.badge-bloqueado{background:#fdecea;color:var(--red);}
+.badge-gestor{background:#EDF2FE;color:var(--navy2);}
+.badge-vendedor{background:#F3F4F6;color:var(--muted);}
+.pendente-banner{background:linear-gradient(135deg,#FFF8E1,#FFF3CD);border:1.5px solid var(--yellow);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:16px;}
+.pendente-banner .pb-icon{font-size:32px;}
+.pendente-banner .pb-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#7D5A00;}
+.pendente-banner .pb-sub{font-size:12px;color:#92711A;margin-top:3px;}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:13px 22px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--sh-lg);z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.success{background:#018a6b;}
 .toast.error{background:var(--red);}
-.spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+.spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg);}}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:#C4CFDF;border-radius:4px;}
@@ -183,21 +196,24 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
         <input type="password" id="loginSenha" placeholder="Sua senha" style="width:100%;margin-bottom:10px;" onkeydown="if(event.key==='Enter')doLogin()"/>
         <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">Entrar →</button>
         <div style="text-align:center;margin-top:10px;">
-          <span style="font-size:12px;color:var(--muted);cursor:pointer;" onclick="toggleNewUser()">+ Primeiro acesso / novo vendedor</span>
+          <span style="font-size:12px;color:var(--muted);cursor:pointer;" onclick="toggleNewUser()">+ Primeiro acesso / novo cadastro</span>
         </div>
       </div>
       <div id="loginNewDiv" style="display:none;">
-        <p class="config-sub">Cadastre-se para acessar o sistema.</p>
+        <p class="config-sub">Preencha seus dados. Seu acesso será liberado pelo gestor.</p>
         <div class="config-section">Novo Cadastro</div>
         <input type="text" id="loginNome" placeholder="Seu nome completo" style="width:100%;margin-bottom:10px;"/>
         <div class="config-row" style="margin-bottom:10px;">
           <select id="loginLoja"><option value="">Loja...</option><option>Boa Vista</option><option>Shopping SL</option><option>Assaí Minas</option></select>
-          <select id="loginRole"><option value="vendedor">Vendedor</option><option value="gestor">Gestor</option></select>
+          <select id="loginRole" style="display:none;"><option value="vendedor">Vendedor</option></select>
         </div>
         <input type="number" id="loginMeta" placeholder="Meta mensal (nº de vendas)" style="width:100%;margin-bottom:10px;"/>
         <input type="password" id="loginNovaSenha" placeholder="Crie uma senha (mín. 4 caracteres)" style="width:100%;margin-bottom:6px;"/>
         <input type="password" id="loginConfSenha" placeholder="Confirme a senha" style="width:100%;margin-bottom:10px;"/>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doCadastro()">Cadastrar →</button>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doCadastro()">Solicitar Acesso →</button>
+        <div style="background:#EEF1F8;border-radius:9px;padding:11px 14px;font-size:11px;color:var(--muted);margin-top:10px;text-align:center;">
+          ⏳ Após o cadastro, aguarde a aprovação do gestor para acessar o sistema.
+        </div>
         <div style="text-align:center;margin-top:10px;">
           <span style="font-size:12px;color:var(--muted);cursor:pointer;" onclick="toggleNewUser()">← Voltar ao login</span>
         </div>
@@ -220,7 +236,10 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
       </div>
     </div>
     <div class="topbar-right">
-      <div id="syncIndicator" style="font-size:11px;color:#7ea8cc;display:none;"><span class="spin" style="width:12px;height:12px;margin-right:4px;vertical-align:middle;"></span> Sincronizando...</div>
+      <div id="pendenteBadge" style="display:none;background:var(--yellow);color:#7D5A00;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;cursor:pointer;" onclick="showView('equipe',document.querySelector('[data-view=equipe]'))">
+        ⚠ <span id="pendenteCnt">0</span> pendentes
+      </div>
+      <div id="syncIndicator" style="font-size:11px;color:#7ea8cc;display:none;"><span class="spin" style="width:12px;height:12px;margin-right:4px;"></span> Sincronizando...</div>
       <button class="btn btn-primary btn-sm" onclick="openLead()">+ Novo Lead</button>
       <div class="user-pill" onclick="logout()">
         <div class="user-avatar" id="userAvatar">?</div>
@@ -230,11 +249,11 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
     </div>
   </div>
   <div class="tabs">
-    <div class="tab active" onclick="showView('kanban',this)">Meu Funil</div>
-    <div class="tab" onclick="showView('lista',this)">Lista</div>
-    <div class="tab manager-only" onclick="showView('dashboard',this)">📊 Dashboard Gestor</div>
-    <div class="tab manager-only" onclick="showView('todosleads',this)">👥 Todos os Leads</div>
-    <div class="tab manager-only" onclick="showView('equipe',this)">⚙ Equipe &amp; Metas</div>
+    <div class="tab active" onclick="showView('kanban',this)" data-view="kanban">Meu Funil</div>
+    <div class="tab" onclick="showView('lista',this)" data-view="lista">Lista</div>
+    <div class="tab manager-only" onclick="showView('dashboard',this)" data-view="dashboard">📊 Dashboard</div>
+    <div class="tab manager-only" onclick="showView('todosleads',this)" data-view="todosleads">👥 Todos os Leads</div>
+    <div class="tab manager-only" onclick="showView('equipe',this)" data-view="equipe">⚙ Equipe &amp; Acessos</div>
   </div>
 
   <!-- KANBAN -->
@@ -300,19 +319,28 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
     </div>
   </div>
 
-  <!-- EQUIPE & METAS -->
+  <!-- EQUIPE & ACESSOS -->
   <div class="view" id="view-equipe">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <div>
-        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--navy);">Equipe &amp; Metas</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Defina metas individuais e acompanhe o desempenho de cada vendedor</div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--navy);">Equipe &amp; Acessos</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Gerencie acessos, funções e metas de cada vendedor</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="loadEquipe()">↻ Atualizar</button>
     </div>
+    <!-- Pendentes -->
+    <div id="pendenteSection" style="display:none;">
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;">⏳ Aguardando Aprovação</div>
+      <div style="background:var(--surface);border-radius:14px;box-shadow:var(--sh);overflow:hidden;margin-bottom:20px;">
+        <table class="all-table"><thead><tr><th>Nome</th><th>Loja</th><th>Cadastrado em</th><th>Ações</th></tr></thead><tbody id="pendenteTbody"></tbody></table>
+      </div>
+    </div>
+    <!-- Ativos -->
+    <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;">👥 Equipe Ativa</div>
     <div style="background:var(--surface);border-radius:14px;box-shadow:var(--sh);overflow:hidden;">
       <table class="all-table">
-        <thead><tr><th>Vendedor</th><th>Loja</th><th>Meta Mensal</th><th>Vendas Mês</th><th>% Meta</th><th>Total Leads</th><th>Conversão</th><th>Ações</th></tr></thead>
-        <tbody id="equipeTbody"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">Clique em ↻ Atualizar para carregar</td></tr></tbody>
+        <thead><tr><th>Vendedor</th><th>Loja</th><th>Função</th><th>Status</th><th>Meta</th><th>Vendas Mês</th><th>% Meta</th><th>Conv.</th><th>Ações</th></tr></thead>
+        <tbody id="equipeTbody"><tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted);">Clique em ↻ Atualizar para carregar</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -368,9 +396,9 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
 
 <!-- MODAL VENDEDOR -->
 <div class="overlay" id="vendedorOverlay" onclick="if(event.target===this)closeVendedor()">
-  <div class="modal" style="max-width:420px;">
+  <div class="modal" style="max-width:460px;">
     <div class="modal-hd">
-      <div class="modal-title">Editar Vendedor</div>
+      <div class="modal-title" id="vendedorModalTitle">Editar Acesso</div>
       <button class="modal-close" onclick="closeVendedor()">×</button>
     </div>
     <div class="modal-body">
@@ -379,15 +407,30 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
         <div class="fgroup"><label>Loja</label>
           <select id="vLoja"><option value="">—</option><option>Boa Vista</option><option>Shopping SL</option><option>Assaí Minas</option></select>
         </div>
-        <div class="fgroup"><label>Meta Mensal (vendas)</label><input type="number" id="vMeta" min="1" max="999" placeholder="Ex: 15"/></div>
+        <div class="fgroup"><label>Meta Mensal (vendas)</label>
+          <input type="number" id="vMeta" min="1" max="999" placeholder="Ex: 15"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fgroup"><label>Função</label>
+          <select id="vRole"><option value="vendedor">Vendedor</option><option value="gestor">Gestor</option></select>
+        </div>
+        <div class="fgroup"><label>Status de Acesso</label>
+          <select id="vStatus"><option value="ativo">✅ Ativo</option><option value="bloqueado">🚫 Bloqueado</option></select>
+        </div>
       </div>
       <div style="background:#FFF8E1;border-radius:9px;padding:12px;font-size:12px;color:#7D5A00;border-left:3px solid var(--yellow);">
-        💡 A meta define o número de vendas fechadas que o vendedor deve atingir no mês.
+        💡 <strong>Gestor:</strong> acessa dashboard, todos os leads e painel de equipe.<br/>
+        💡 <strong>Bloqueado:</strong> o usuário não consegue fazer login.
+      </div>
+      <div class="fgroup">
+        <label>Redefinir Senha (opcional)</label>
+        <input type="password" id="vNovaSenha" placeholder="Nova senha (deixe em branco para não alterar)"/>
       </div>
     </div>
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeVendedor()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveVendedor()">Salvar</button>
+      <button class="btn btn-primary" onclick="saveVendedor()">Salvar Alterações</button>
     </div>
   </div>
 </div>
@@ -407,34 +450,43 @@ function saveConfig(){const u=document.getElementById('cfgUrl').value.trim(),k=d
 function initSB(u,k){sb=supabase.createClient(u,k);showLogin();}
 function showSetup(){document.getElementById('setupSection').style.display='';document.getElementById('loginSection').style.display='none';}
 async function showLogin(){document.getElementById('setupSection').style.display='none';document.getElementById('loginSection').style.display='';await loadVendedores();}
+
 async function loadVendedores(){
   const sel=document.getElementById('loginVendedor');
   sel.innerHTML='<option value="">Carregando...</option>';
-  try{const{data}=await sb.from('vendedores').select('*').order('nome');
+  try{
+    const{data}=await sb.from('vendedores').select('*').order('nome');
     allVendedores=data||[];
-    sel.innerHTML='<option value="">Selecione seu nome...</option>'+allVendedores.map(v=>`<option value="${v.id}">${v.nome} (${v.loja||'—'})</option>`).join('');
+    // Only show active users in login dropdown
+    const ativos=allVendedores.filter(v=>v.status==='ativo'||!v.status);
+    sel.innerHTML='<option value="">Selecione seu nome...</option>'+ativos.map(v=>`<option value="${v.id}">${v.nome} (${v.loja||'—'})</option>`).join('');
   }catch(e){sel.innerHTML='<option value="">Erro — verifique conexão</option>';}
 }
+
 function toggleNewUser(){
   const nd=document.getElementById('loginNewDiv'),ed=document.getElementById('loginExistingDiv');
   const show=nd.style.display!=='none';nd.style.display=show?'none':'';ed.style.display=show?'':'none';
 }
+
 async function hashSenha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');}
+
 async function doLogin(){
   const id=document.getElementById('loginVendedor').value,senha=document.getElementById('loginSenha').value;
   if(!id){toast('Selecione seu nome','error');return;}
   if(!senha){toast('Informe sua senha','error');return;}
   const v=allVendedores.find(x=>x.id===id);
   if(!v){toast('Usuário não encontrado','error');return;}
-  if(!v.senha_hash){toast('Sem senha cadastrada — use Primeiro Acesso para definir sua senha','error');return;}
+  if(v.status==='bloqueado'){toast('Acesso bloqueado. Contate o gestor.','error');return;}
+  if(v.status==='pendente'){toast('Cadastro aguardando aprovação do gestor.','error');return;}
+  if(!v.senha_hash){toast('Sem senha cadastrada — use Primeiro Acesso','error');return;}
   const h=await hashSenha(senha);
   if(h!==v.senha_hash){toast('Senha incorreta','error');return;}
   currentUser=v;localStorage.setItem('cvm_user_id',v.id);enterApp();
 }
+
 async function doCadastro(){
   const nome=document.getElementById('loginNome').value.trim();
   const loja=document.getElementById('loginLoja').value;
-  const role=document.getElementById('loginRole').value;
   const meta=parseInt(document.getElementById('loginMeta').value)||10;
   const senha=document.getElementById('loginNovaSenha').value;
   const conf=document.getElementById('loginConfSenha').value;
@@ -443,24 +495,34 @@ async function doCadastro(){
   if(senha!==conf){toast('As senhas não coincidem','error');return;}
   const hash=await hashSenha(senha);
   const email=nome.toLowerCase().replace(/\s+/g,'.')+'.'+Date.now()+'@cvm.local';
-  const{data,error}=await sb.from('vendedores').insert({nome,loja,meta_mensal:meta,email,senha_hash:hash}).select().single();
+  const{data,error}=await sb.from('vendedores').insert({nome,loja,meta_mensal:meta,email,senha_hash:hash,status:'pendente',role:'vendedor'}).select().single();
   if(error){toast('Erro: '+error.message,'error');return;}
-  currentUser={...data,role};localStorage.setItem('cvm_user_id',data.id);
-  toast('Cadastro realizado!','success');setTimeout(()=>enterApp(),500);
+  toast('Cadastro solicitado! Aguarde a aprovação do gestor.','success');
+  toggleNewUser();
 }
+
 async function enterApp(){
-  const mgr=currentUser.email?.includes('gestor')||currentUser.nome?.toLowerCase().includes('gestor');
+  const isManager=currentUser.role==='gestor'||currentUser.email?.includes('gestor');
   document.getElementById('configScreen').style.display='none';
   document.getElementById('app').style.display='flex';
   document.getElementById('userName').textContent=currentUser.nome;
   document.getElementById('userAvatar').textContent=currentUser.nome.charAt(0).toUpperCase();
   document.getElementById('topbarSub').textContent=currentUser.loja||'CVM';
-  if(mgr)document.querySelectorAll('.manager-only').forEach(e=>e.classList.add('show'));
-  currentUser._isManager=mgr;
+  if(isManager)document.querySelectorAll('.manager-only').forEach(e=>e.classList.add('show'));
+  currentUser._isManager=isManager;
   await loadMyLeads();
-  if(mgr)loadDashboard();
+  if(isManager){loadDashboard();checkPendentes();}
   sb.channel('leads').on('postgres_changes',{event:'*',schema:'public',table:'leads'},()=>{loadMyLeads();if(currentUser._isManager)loadDashboard();}).subscribe();
+  sb.channel('vendedores').on('postgres_changes',{event:'*',schema:'public',table:'vendedores'},()=>{if(currentUser._isManager)checkPendentes();}).subscribe();
 }
+
+async function checkPendentes(){
+  const{data}=await sb.from('vendedores').select('id').eq('status','pendente');
+  const cnt=data?.length||0;
+  document.getElementById('pendenteBadge').style.display=cnt>0?'':'none';
+  document.getElementById('pendenteCnt').textContent=cnt;
+}
+
 function logout(){localStorage.removeItem('cvm_user_id');currentUser=null;myLeads=[];allLeads=[];document.getElementById('configScreen').style.display='flex';document.getElementById('app').style.display='none';showLogin();}
 
 window.addEventListener('DOMContentLoaded',async()=>{
@@ -468,19 +530,19 @@ window.addEventListener('DOMContentLoaded',async()=>{
   localStorage.setItem('sb_url',url);localStorage.setItem('sb_key',key);
   initSB(url,key);
   const uid=localStorage.getItem('cvm_user_id');
-  if(uid){const{data}=await sb.from('vendedores').select('*').eq('id',uid).single();if(data){currentUser=data;await enterApp();}}
+  if(uid){const{data}=await sb.from('vendedores').select('*').eq('id',uid).single();if(data&&data.status==='ativo'){currentUser=data;await enterApp();}}
 });
 
 async function loadMyLeads(){setSync(1);const{data}=await sb.from('leads').select('*,historico(*)').eq('vendedor_id',currentUser.id).order('created_at',{ascending:false});myLeads=data||[];setSync(0);renderKanban();renderMyKpis();renderLista();}
 async function loadAllLeads(){setSync(1);const{data}=await sb.from('leads').select('*,vendedores(nome,loja),historico(*)').order('created_at',{ascending:false});allLeads=data||[];setSync(0);renderTodosLeads();}
-async function loadDashboard(){await loadAllLeads();await loadVendedores();renderDashboard();}
+async function loadDashboard(){await loadAllLeads();const{data}=await sb.from('vendedores').select('*').order('nome');allVendedores=data||[];renderDashboard();}
 function setSync(on){document.getElementById('syncIndicator').style.display=on?'':'none';}
 
 function showView(name,el){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
-  el.classList.add('active');
+  if(el)el.classList.add('active');
   if(name==='dashboard'||name==='todosleads')loadDashboard();
   if(name==='kanban')loadMyLeads();
   if(name==='equipe')loadEquipe();
@@ -497,9 +559,9 @@ function renderKanban(){
     const items=fl.filter(l=>l.etapa===s);cnt.textContent=items.length;body.innerHTML='';
     if(!items.length){body.innerHTML='<div class="empty-col">Nenhum lead aqui</div>';return;}
     items.forEach(l=>{
-      const days=daysSince(l.created_at),alert=days>=3&&s!=='venda';
+      const days=daysSince(l.created_at),alrt=days>=3&&s!=='venda';
       const div=document.createElement('div');div.className='lead-card';div.draggable=true;div.dataset.id=l.id;
-      div.innerHTML=`<div class="lead-days ${alert?'alert':''}">${days}d</div><div class="lead-name">${esc(l.nome)}</div>${l.destino?`<div class="lead-dest">✈ ${esc(l.destino)}${l.periodo?' · '+esc(l.periodo):''}</div>`:''}<div class="lead-tags">${l.loja?`<span class="tag tag-loja">${esc(l.loja)}</span>`:''} ${l.canal?`<span class="tag tag-canal">${esc(l.canal)}</span>`:''} ${l.valor_estimado?`<span class="tag" style="background:#FEF3C7;color:#92400E;">R$ ${fmtNum(l.valor_estimado)}</span>`:''}</div>${l.notas?`<div class="lead-preview">${esc(l.notas)}</div>`:''}`;
+      div.innerHTML=`<div class="lead-days ${alrt?'alert':''}">${days}d</div><div class="lead-name">${esc(l.nome)}</div>${l.destino?`<div class="lead-dest">✈ ${esc(l.destino)}${l.periodo?' · '+esc(l.periodo):''}</div>`:''}<div class="lead-tags">${l.loja?`<span class="tag tag-loja">${esc(l.loja)}</span>`:''} ${l.canal?`<span class="tag tag-canal">${esc(l.canal)}</span>`:''} ${l.valor_estimado?`<span class="tag" style="background:#FEF3C7;color:#92400E;">R$ ${fmtNum(l.valor_estimado)}</span>`:''}</div>${l.notas?`<div class="lead-preview">${esc(l.notas)}</div>`:''}`;
       div.addEventListener('click',()=>openLead(l.id));
       div.addEventListener('dragstart',()=>{dragId=l.id;div.classList.add('dragging');});
       div.addEventListener('dragend',()=>div.classList.remove('dragging'));
@@ -537,9 +599,10 @@ function renderDashboard(){
   const urgentes=leads.filter(l=>daysSince(l.created_at)>=3&&l.etapa!=='venda').length;
   const valorTotal=leads.filter(l=>l.etapa==='venda').reduce((a,l)=>a+(l.valor_estimado||0),0);
   document.getElementById('dashKpis').innerHTML=`<div class="kpi-card"><div class="kpi-val">${total}</div><div class="kpi-label">Total Leads</div><div class="kpi-sub">${novosSem} novos esta semana</div></div><div class="kpi-card green"><div class="kpi-val">${vendas}</div><div class="kpi-label">Vendas</div><div class="kpi-sub">R$ ${fmtNum(valorTotal)}</div></div><div class="kpi-card"><div class="kpi-val">${conv}%</div><div class="kpi-label">Conversão</div></div><div class="kpi-card ${urgentes?'red':''}"><div class="kpi-val">${urgentes}</div><div class="kpi-label">Parados +3d</div><div class="kpi-sub">${novosHoje} novos hoje</div></div>`;
+  const ativos=allVendedores.filter(v=>v.status==='ativo'||!v.status);
   const maxFn=Math.max(...STAGES.map(s=>leads.filter(l=>l.etapa===s).length),1);
   document.getElementById('dashFunil').innerHTML=STAGES.map(s=>{const n=leads.filter(l=>l.etapa===s).length,pct=total?Math.round(n/total*100):0,w=Math.round(n/maxFn*100);return`<div class="fn-row"><div class="fn-label">${SL[s]}</div><div class="fn-track"><div class="fn-bar" style="width:${w}%;background:${SC[s]};"><span>${n}</span></div></div><div class="fn-pct">${pct}%</div></div>`;}).join('');
-  const ranked=allVendedores.map(v=>{const vl=leads.filter(l=>l.vendedor_id===v.id),vnd=vl.filter(l=>l.etapa==='venda').length;return{...v,total:vl.length,vendas:vnd,conv:vl.length?Math.round(vnd/vl.length*100):0};}).sort((a,b)=>b.vendas-a.vendas);
+  const ranked=ativos.map(v=>{const vl=leads.filter(l=>l.vendedor_id===v.id),vnd=vl.filter(l=>l.etapa==='venda').length;return{...v,total:vl.length,vendas:vnd,conv:vl.length?Math.round(vnd/vl.length*100):0};}).sort((a,b)=>b.vendas-a.vendas);
   const maxR=ranked[0]?.vendas||1;
   document.getElementById('dashRanking').innerHTML=ranked.slice(0,10).map((v,i)=>`<div class="rank-row"><div class="rank-num">${i+1}</div><div><div class="rank-name">${esc(v.nome)}</div><div style="font-size:10px;color:var(--muted);">${v.loja||'—'}</div></div><div class="rank-bar-wrap"><div class="rank-bar" style="width:${Math.round(v.vendas/maxR*100)}%;background:${i===0?'var(--mint)':'var(--teal)'};"></div></div><div class="rank-cnt">${v.vendas}</div><div class="rank-conv">${v.conv}%</div></div>`).join('')||'<div style="color:var(--muted);font-size:12px;">Sem dados</div>';
   const alts=leads.filter(l=>daysSince(l.created_at)>=3&&l.etapa!=='venda').sort((a,b)=>daysSince(b.created_at)-daysSince(a.created_at)).slice(0,8);
@@ -551,45 +614,110 @@ function renderDashboard(){
 
 function renderTodosLeads(){
   const sel=document.getElementById('tlVendedor'),cur=sel.value;
-  sel.innerHTML='<option value="">Todos vendedores</option>'+allVendedores.map(v=>`<option value="${v.id}"${v.id===cur?' selected':''}>${v.nome}</option>`).join('');
+  const ativos=allVendedores.filter(v=>v.status==='ativo'||!v.status);
+  sel.innerHTML='<option value="">Todos vendedores</option>'+ativos.map(v=>`<option value="${v.id}"${v.id===cur?' selected':''}>${v.nome}</option>`).join('');
   document.getElementById('tlTbody').innerHTML=filtAll().map(l=>`<tr onclick="openLead('${l.id}',true)" ${daysSince(l.created_at)>=3&&l.etapa!=='venda'?'class="urgent"':''}><td><strong>${esc(l.nome)}</strong></td><td>${esc(l.vendedores?.nome||'—')}</td><td>${esc(l.loja||l.vendedores?.loja||'—')}</td><td>${esc(l.destino||'—')}</td><td>${esc(l.canal||'—')}</td><td><span class="pill-stage" style="background:${SC[l.etapa]}20;color:${SC[l.etapa]}">${SL[l.etapa]}</span></td><td style="font-family:'DM Mono',monospace;">${daysSince(l.created_at)}d</td><td>${l.valor_estimado?'R$ '+fmtNum(l.valor_estimado):'—'}</td></tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">Nenhum lead</td></tr>';
 }
 
+// ── EQUIPE & ACESSOS ──────────────────────────────────────────────
 async function loadEquipe(){
-  document.getElementById('equipeTbody').innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">Carregando...</td></tr>';
-  await loadVendedores();await loadAllLeads();renderEquipe();
+  document.getElementById('equipeTbody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted);">Carregando...</td></tr>';
+  const{data}=await sb.from('vendedores').select('*').order('nome');
+  allVendedores=data||[];
+  await loadAllLeads();
+  renderEquipe();
 }
+
 function renderEquipe(){
   const hoje=new Date(),inicioMes=new Date(hoje.getFullYear(),hoje.getMonth(),1);
-  document.getElementById('equipeTbody').innerHTML=allVendedores.map(v=>{
+  const pendentes=allVendedores.filter(v=>v.status==='pendente');
+  const ativos=allVendedores.filter(v=>v.status!=='pendente');
+
+  // Pendentes
+  const pendsec=document.getElementById('pendenteSection');
+  pendsec.style.display=pendentes.length?'':'none';
+  document.getElementById('pendenteTbody').innerHTML=pendentes.map(v=>`
+    <tr>
+      <td><strong>${esc(v.nome)}</strong></td>
+      <td>${esc(v.loja||'—')}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;">${fmtDate(v.created_at)}</td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn btn-success btn-sm" onclick="aprovarVendedor('${v.id}')">✅ Aprovar</button>
+        <button class="btn btn-danger btn-sm" onclick="reprovarVendedor('${v.id}')">✗ Recusar</button>
+      </td>
+    </tr>`).join('');
+
+  // Ativos + bloqueados
+  document.getElementById('equipeTbody').innerHTML=ativos.map(v=>{
     const vl=allLeads.filter(l=>l.vendedor_id===v.id);
-    const vendasMes=vl.filter(l=>l.etapa==='venda'&&new Date(l.updated_at)>=inicioMes).length;
+    const vendasMes=vl.filter(l=>l.etapa==='venda'&&new Date(l.updated_at||l.created_at)>=inicioMes).length;
     const total=vl.length,vend=vl.filter(l=>l.etapa==='venda').length;
     const conv=total?Math.round(vend/total*100):0,meta=v.meta_mensal||10;
     const pct=Math.min(Math.round(vendasMes/meta*100),100);
     const color=pct>=100?'#018a6b':pct>=60?'var(--teal)':pct>=30?'var(--orange)':'var(--red)';
-    return`<tr><td><strong>${esc(v.nome)}</strong></td><td>${esc(v.loja||'—')}</td><td><div style="display:flex;align-items:center;gap:8px;"><span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;">${meta}</span></div></td><td style="font-family:'DM Mono',monospace;font-weight:700;color:${color};">${vendasMes}</td><td><div style="display:flex;align-items:center;gap:8px;"><div style="width:80px;background:var(--bg);border-radius:20px;height:7px;overflow:hidden;"><div style="width:${pct}%;height:100%;border-radius:20px;background:${color};"></div></div><span style="font-size:11px;font-weight:700;color:${color};">${pct}%</span></div></td><td style="font-family:'DM Mono',monospace;">${total}</td><td style="font-weight:700;color:${conv>=20?'#018a6b':conv>=10?'var(--teal)':'var(--muted)'};">${conv}%</td><td><button class="btn btn-primary btn-sm" onclick="openVendedor('${v.id}')">Definir Meta</button></td></tr>`;
-  }).join('')||'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">Nenhum vendedor</td></tr>';
+    const roleBadge=v.role==='gestor'?'<span class="badge badge-gestor">Gestor</span>':'<span class="badge badge-vendedor">Vendedor</span>';
+    const statusBadge=v.status==='bloqueado'?'<span class="badge badge-bloqueado">Bloqueado</span>':'<span class="badge badge-ativo">Ativo</span>';
+    return`<tr>
+      <td><strong>${esc(v.nome)}</strong></td>
+      <td>${esc(v.loja||'—')}</td>
+      <td>${roleBadge}</td>
+      <td>${statusBadge}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:700;">${meta}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:700;color:${color};">${vendasMes}</td>
+      <td><div style="display:flex;align-items:center;gap:6px;"><div style="width:60px;background:var(--bg);border-radius:20px;height:6px;overflow:hidden;"><div style="width:${pct}%;height:100%;border-radius:20px;background:${color};"></div></div><span style="font-size:11px;font-weight:700;color:${color};">${pct}%</span></div></td>
+      <td style="font-weight:700;color:${conv>=20?'#018a6b':'var(--muted)'};">${conv}%</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openVendedor('${v.id}')">✏ Editar</button></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted);">Nenhum usuário</td></tr>';
+
+  checkPendentes();
 }
+
+async function aprovarVendedor(id){
+  await sb.from('vendedores').update({status:'ativo'}).eq('id',id);
+  toast('Acesso aprovado!','success');loadEquipe();
+}
+async function reprovarVendedor(id){
+  if(!confirm('Recusar e excluir este cadastro?'))return;
+  await sb.from('vendedores').delete().eq('id',id);
+  toast('Cadastro recusado.');loadEquipe();
+}
+
 function openVendedor(id){
-  editingVendedorId=id;const v=allVendedores.find(x=>x.id===id);if(!v)return;
-  document.getElementById('vNome').value=v.nome||'';document.getElementById('vLoja').value=v.loja||'';document.getElementById('vMeta').value=v.meta_mensal||10;
+  editingVendedorId=id;
+  const v=allVendedores.find(x=>x.id===id);if(!v)return;
+  document.getElementById('vNome').value=v.nome||'';
+  document.getElementById('vLoja').value=v.loja||'';
+  document.getElementById('vMeta').value=v.meta_mensal||10;
+  document.getElementById('vRole').value=v.role||'vendedor';
+  document.getElementById('vStatus').value=v.status||'ativo';
+  document.getElementById('vNovaSenha').value='';
   document.getElementById('vendedorOverlay').classList.add('open');
 }
 function closeVendedor(){document.getElementById('vendedorOverlay').classList.remove('open');editingVendedorId=null;}
+
 async function saveVendedor(){
   if(!editingVendedorId)return;
-  const loja=document.getElementById('vLoja').value,meta=parseInt(document.getElementById('vMeta').value)||10;
-  const{error}=await sb.from('vendedores').update({loja,meta_mensal:meta}).eq('id',editingVendedorId);
+  const loja=document.getElementById('vLoja').value;
+  const meta=parseInt(document.getElementById('vMeta').value)||10;
+  const role=document.getElementById('vRole').value;
+  const status=document.getElementById('vStatus').value;
+  const novaSenha=document.getElementById('vNovaSenha').value;
+  const update={loja,meta_mensal:meta,role,status};
+  if(novaSenha){
+    if(novaSenha.length<4){toast('Senha deve ter pelo menos 4 caracteres','error');return;}
+    update.senha_hash=await hashSenha(novaSenha);
+  }
+  const{error}=await sb.from('vendedores').update(update).eq('id',editingVendedorId);
   if(error){toast('Erro: '+error.message,'error');return;}
-  const v=allVendedores.find(x=>x.id===editingVendedorId);if(v){v.loja=loja;v.meta_mensal=meta;}
-  toast('Meta atualizada!','success');closeVendedor();renderEquipe();
+  toast('Alterações salvas!','success');closeVendedor();loadEquipe();
 }
 
+// ── MODAL LEAD ────────────────────────────────────────────────────
 async function openLead(id=null,readOnly=false){
   editingLeadId=id;
   document.getElementById('leadModalTitle').textContent=id?'Editar Lead':'Novo Lead';
-  document.getElementById('btnDel').style.display=id?'':'none';
+  document.getElementById('btnDel').style.display=id&&!readOnly?'':'none';
   document.getElementById('histSec').style.display=id?'':'none';
   document.getElementById('btnSave').style.display=readOnly?'none':'';
   clearForm();
@@ -625,6 +753,7 @@ function daysSince(ts){return Math.floor((Date.now()-new Date(ts).getTime())/864
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function fmtNum(n){return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function fmtDatetime(ts){return new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});}
+function fmtDate(ts){return new Date(ts).toLocaleDateString('pt-BR');}
 function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(type?' '+type:'');clearTimeout(t._to);t._to=setTimeout(()=>t.classList.remove('show'),2500);}
 </script>
 </body>
