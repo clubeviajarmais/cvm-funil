@@ -454,6 +454,7 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
     <div class="tab" onclick="showView('lista',this)" data-view="lista">Lista</div>
     <div class="tab manager-only" onclick="showView('dashboard',this)" data-view="dashboard">📊 Dashboard Gestor</div>
     <div class="tab manager-only" onclick="showView('todosleads',this)" data-view="todosleads">👥 Todos os Leads</div>
+    <div class="tab manager-only" onclick="showView('equipe',this)" data-view="equipe">⚙ Equipe &amp; Metas</div>
   </div>
 
   <!-- ── KANBAN VIEW ── -->
@@ -845,6 +846,7 @@ function showView(name, el) {
   el.classList.add('active');
   if (name==='dashboard'||name==='todosleads') loadDashboard();
   if (name==='kanban') loadMyLeads();
+  if (name==='equipe') loadEquipe();
 }
 
 // ── FILTERS ───────────────────────────────────────────────────────
@@ -1226,6 +1228,88 @@ async function addHist() {
   // update local
   const l = myLeads.find(x=>x.id===editingLeadId);
   if (l) l.historico = data;
+}
+
+
+// ── EQUIPE & METAS ────────────────────────────────────────────────
+let editingVendedorId = null;
+
+async function loadEquipe() {
+  document.getElementById('equipeTbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">Carregando...</td></tr>';
+  await loadVendedores();
+  await loadAllLeads();
+  renderEquipe();
+}
+
+function renderEquipe() {
+  const hoje = new Date();
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+
+  const rows = allVendedores.map(v => {
+    const vLeads = allLeads.filter(l => l.vendedor_id === v.id);
+    const vendasMes = vLeads.filter(l => l.etapa === 'venda' && new Date(l.updated_at) >= inicioMes).length;
+    const totalLeads = vLeads.length;
+    const conv = totalLeads ? Math.round(vLeads.filter(l=>l.etapa==='venda').length / totalLeads * 100) : 0;
+    const meta = v.meta_mensal || 10;
+    const pct = Math.min(Math.round(vendasMes / meta * 100), 100);
+    const color = pct >= 100 ? '#018a6b' : pct >= 60 ? 'var(--teal)' : pct >= 30 ? 'var(--orange)' : 'var(--red)';
+
+    return `<tr>
+      <td><strong>${esc(v.nome)}</strong></td>
+      <td>${esc(v.loja || '—')}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--navy);">${meta}</span>
+          <button class="btn btn-ghost btn-sm" onclick="openVendedor('${v.id}')" style="padding:3px 8px;font-size:11px;">Editar</button>
+        </div>
+      </td>
+      <td style="font-family:'DM Mono',monospace;font-weight:700;color:${color};">${vendasMes}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:80px;background:var(--bg);border-radius:20px;height:7px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;border-radius:20px;background:${color};transition:width .6s;"></div>
+          </div>
+          <span style="font-size:11px;font-weight:700;color:${color};">${pct}%</span>
+        </div>
+      </td>
+      <td style="font-family:'DM Mono',monospace;">${totalLeads}</td>
+      <td style="font-weight:700;color:${conv>=20?'#018a6b':conv>=10?'var(--teal)':'var(--muted)'};">${conv}%</td>
+      <td><button class="btn btn-primary btn-sm" onclick="openVendedor('${v.id}')">Definir Meta</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('equipeTbody').innerHTML = rows ||
+    '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted);">Nenhum vendedor cadastrado</td></tr>';
+}
+
+function openVendedor(id) {
+  editingVendedorId = id;
+  const v = allVendedores.find(x => x.id === id);
+  if (!v) return;
+  document.getElementById('vNome').value = v.nome || '';
+  document.getElementById('vLoja').value = v.loja || '';
+  document.getElementById('vMeta').value = v.meta_mensal || 10;
+  document.getElementById('vendedorOverlay').classList.add('open');
+}
+
+function closeVendedor() {
+  document.getElementById('vendedorOverlay').classList.remove('open');
+  editingVendedorId = null;
+}
+
+async function saveVendedor() {
+  if (!editingVendedorId) return;
+  const loja = document.getElementById('vLoja').value;
+  const meta = parseInt(document.getElementById('vMeta').value) || 10;
+  const { error } = await sb.from('vendedores').update({ loja, meta_mensal: meta }).eq('id', editingVendedorId);
+  if (error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
+  // update local
+  const v = allVendedores.find(x => x.id === editingVendedorId);
+  if (v) { v.loja = loja; v.meta_mensal = meta; }
+  toast('Meta atualizada com sucesso!', 'success');
+  closeVendedor();
+  renderEquipe();
+  renderDashboard();
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────
