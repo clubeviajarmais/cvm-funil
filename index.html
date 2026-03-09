@@ -165,6 +165,79 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:#C4CFDF;border-radius:4px;}
 @media(max-width:900px){.kanban{grid-template-columns:repeat(2,1fr);}.kpi-strip.cols-5{grid-template-columns:repeat(2,1fr);}.dash-grid{grid-template-columns:1fr;}}
+
+/* ══ ARENA ══════════════════════════════════════════════ */
+.arena-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+.arena-title-wrap{display:flex;align-items:center;gap:14px;}
+.arena-crown{font-size:38px;line-height:1;filter:drop-shadow(0 2px 8px rgba(249,199,79,.5));}
+.arena-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--navy);letter-spacing:-.3px;}
+.arena-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.arena-toggle{display:flex;background:var(--bg);border-radius:10px;padding:3px;gap:2px;}
+.atoggle{padding:6px 16px;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s;}
+.atoggle.active{background:#fff;color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+
+/* KPI strip */
+.arena-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.arena-kpi{background:var(--surface);border-radius:12px;padding:16px 18px;box-shadow:var(--sh);border-top:3px solid var(--teal);text-align:center;}
+.arena-kpi.gold{border-top-color:#F9C74F;}
+.arena-kpi.mint{border-top-color:var(--mint);}
+.arena-kpi.orange{border-top-color:var(--orange);}
+.arena-kpi-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--navy);}
+.arena-kpi.gold .arena-kpi-val{color:#b8880a;}
+.arena-kpi.mint .arena-kpi-val{color:#018a6b;}
+.arena-kpi.orange .arena-kpi-val{color:#c4632a;}
+.arena-kpi-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;}
+
+/* Podium */
+.podium-wrap{display:flex;justify-content:center;align-items:flex-end;gap:12px;margin-bottom:28px;padding:0 20px;}
+.podium-slot{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.podium-avatar{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;position:relative;}
+.podium-avatar.p1{background:linear-gradient(135deg,#FFD700,#FFA500);color:#7D5A00;box-shadow:0 4px 20px rgba(255,215,0,.5);width:72px;height:72px;font-size:26px;}
+.podium-avatar.p2{background:linear-gradient(135deg,#C0C0C0,#A0A0A0);color:#444;}
+.podium-avatar.p3{background:linear-gradient(135deg,#CD7F32,#A0522D);color:#fff;}
+.podium-crown{position:absolute;top:-14px;font-size:18px;}
+.podium-name{font-size:12px;font-weight:700;color:var(--navy);text-align:center;max-width:90px;}
+.podium-loja{font-size:10px;color:var(--muted);text-align:center;}
+.podium-pts{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--teal);}
+.podium-block{border-radius:10px 10px 0 0;width:80px;display:flex;align-items:center;justify-content:center;}
+.podium-block.b1{height:90px;background:linear-gradient(180deg,#FFD70030,#FFD70010);border:2px solid #FFD700;}
+.podium-block.b2{height:65px;background:linear-gradient(180deg,#C0C0C020,#C0C0C008);border:2px solid #C0C0C0;}
+.podium-block.b3{height:45px;background:linear-gradient(180deg,#CD7F3220,#CD7F3208);border:2px solid #CD7F32;}
+.podium-pos{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;opacity:.5;}
+
+/* Arena table */
+.arena-section-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.arena-table-wrap{background:var(--surface);border-radius:14px;box-shadow:var(--sh);overflow:auto;margin-bottom:8px;}
+.arena-table{width:100%;border-collapse:collapse;font-size:13px;}
+.arena-table th{text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:11px 14px;background:var(--bg);border-bottom:2px solid var(--border);}
+.arena-table td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.arena-table tr:last-child td{border-bottom:none;}
+.arena-table tr:hover td{background:#F5F8FF;}
+.arena-table tr.me td{background:#E8FFF9;}
+.arena-rank-num{font-family:'DM Mono',monospace;font-size:15px;font-weight:800;}
+.arena-rank-num.r1{color:#b8880a;}
+.arena-rank-num.r2{color:#888;}
+.arena-rank-num.r3{color:#A0522D;}
+.arena-pts{font-family:'DM Mono',monospace;font-size:13px;font-weight:800;color:var(--teal);}
+.arena-bar-wrap{display:flex;align-items:center;gap:8px;}
+.arena-bar-track{flex:1;max-width:80px;background:var(--bg);border-radius:20px;height:6px;overflow:hidden;}
+.arena-bar-fill{height:100%;border-radius:20px;background:var(--teal);transition:width .8s ease;}
+.badge-pill{display:inline-block;font-size:11px;padding:2px 6px;border-radius:6px;margin:1px;background:#EDF2FE;cursor:default;}
+.badge-pill[title]:hover::after{content:attr(title);position:absolute;background:var(--navy);color:#fff;padding:4px 8px;border-radius:6px;font-size:11px;white-space:nowrap;margin-top:-30px;margin-left:10px;}
+
+/* Badges wall */
+.badges-wall{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px;}
+.badge-card{background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh);display:flex;gap:12px;align-items:center;position:relative;overflow:hidden;transition:transform .15s;}
+.badge-card:hover{transform:translateY(-2px);box-shadow:var(--sh-lg);}
+.badge-card::before{content:'';position:absolute;right:-16px;top:-16px;width:60px;height:60px;border-radius:50%;opacity:.08;background:var(--navy);}
+.badge-icon{font-size:28px;line-height:1;flex-shrink:0;}
+.badge-info-name{font-size:13px;font-weight:700;color:var(--navy);}
+.badge-info-who{font-size:11px;color:var(--teal);font-weight:600;margin-top:2px;}
+.badge-info-desc{font-size:10px;color:var(--muted);margin-top:2px;}
+.badge-card.empty{opacity:.4;filter:grayscale(1);}
+.badge-card.empty .badge-info-who{color:var(--muted);}
+@media(max-width:900px){.arena-kpis{grid-template-columns:repeat(2,1fr);}.podium-wrap{gap:6px;}.arena-header{flex-direction:column;align-items:flex-start;}}
+
 </style>
 </head>
 <body>
@@ -254,6 +327,7 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
     <div class="tab manager-only" onclick="showView('dashboard',this)" data-view="dashboard">📊 Dashboard</div>
     <div class="tab manager-only" onclick="showView('todosleads',this)" data-view="todosleads">👥 Todos os Leads</div>
     <div class="tab manager-only" onclick="showView('equipe',this)" data-view="equipe">⚙ Equipe &amp; Acessos</div>
+    <div class="tab" onclick="showView('arena',this)" data-view="arena">🏆 Arena</div>
   </div>
 
   <!-- KANBAN -->
@@ -345,6 +419,39 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
     </div>
   </div>
 </div>
+
+
+  <!-- ARENA -->
+  <div class="view" id="view-arena">
+    <div class="arena-header">
+      <div class="arena-title-wrap">
+        <div class="arena-crown">🏆</div>
+        <div>
+          <div class="arena-title">Arena CVM</div>
+          <div class="arena-sub" id="arenaPeriodo"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div class="arena-toggle">
+          <button class="atoggle active" id="togVend" onclick="setArenaView('vendedores')">Vendedores</button>
+          <button class="atoggle" id="togLoja" onclick="setArenaView('lojas')">Lojas</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadArena()">↻</button>
+      </div>
+    </div>
+    <div class="arena-kpis" id="arenaKpis"></div>
+    <div class="podium-wrap" id="arenaPodium"></div>
+    <div class="arena-section-title">📋 Ranking Completo — <span id="arenaRankLabel">Vendedores</span></div>
+    <div class="arena-table-wrap">
+      <table class="arena-table">
+        <thead><tr><th>#</th><th>Nome</th><th>Loja</th><th>Leads</th><th>Vendas</th><th>Conv.</th><th>Valor (R$)</th><th>Pts</th><th>Badges</th></tr></thead>
+        <tbody id="arenaBody"></tbody>
+      </table>
+    </div>
+    <div class="arena-section-title" style="margin-top:28px;">🎖 Conquistas do Mês</div>
+    <div class="badges-wall" id="badgesWall"></div>
+  </div>
+
 
 <!-- MODAL LEAD -->
 <div class="overlay" id="leadOverlay" onclick="if(event.target===this)closeLead()">
@@ -546,6 +653,7 @@ function showView(name,el){
   if(name==='dashboard'||name==='todosleads')loadDashboard();
   if(name==='kanban')loadMyLeads();
   if(name==='equipe')loadEquipe();
+  if(name==='arena')loadArena();
 }
 
 function filtMy(){const q=(document.getElementById('kSearch').value||'').toLowerCase(),c=document.getElementById('kCanal').value;return myLeads.filter(l=>(!q||l.nome?.toLowerCase().includes(q)||l.destino?.toLowerCase().includes(q))&&(!c||l.canal===c));}
@@ -748,6 +856,241 @@ async function saveLead(){
 async function deleteLead(){if(!editingLeadId||!confirm('Excluir este lead?'))return;await sb.from('leads').delete().eq('id',editingLeadId);toast('Lead excluído');closeLead();await loadMyLeads();}
 function renderHist(hist){document.getElementById('histList').innerHTML=hist.length?[...hist].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).map(h=>`<div class="hist-item"><div class="hist-time">${fmtDatetime(h.created_at)}</div>${esc(h.texto)}</div>`).join(''):'<div style="font-size:12px;color:var(--muted);">Nenhuma interação ainda.</div>';document.getElementById('histNew').value='';}
 async function addHist(){const txt=document.getElementById('histNew').value.trim();if(!txt||!editingLeadId)return;const{error}=await sb.from('historico').insert({lead_id:editingLeadId,vendedor_id:currentUser.id,texto:txt});if(error){toast('Erro','error');return;}toast('Nota salva!','success');document.getElementById('histNew').value='';const{data}=await sb.from('historico').select('*').eq('lead_id',editingLeadId).order('created_at',{ascending:false});renderHist(data||[]);}
+
+
+// ══ ARENA / GAMIFICAÇÃO ══════════════════════════════════════════
+let arenaView = 'vendedores';
+let arenaData = { vendedores: [], leads: [] };
+
+function setArenaView(v) {
+  arenaView = v;
+  document.getElementById('togVend').classList.toggle('active', v === 'vendedores');
+  document.getElementById('togLoja').classList.toggle('active', v === 'lojas');
+  document.getElementById('arenaRankLabel').textContent = v === 'lojas' ? 'Lojas' : 'Vendedores';
+  renderArena();
+}
+
+async function loadArena() {
+  setSync(1);
+  const [{ data: vends }, { data: leads }] = await Promise.all([
+    sb.from('vendedores').select('*').eq('status', 'ativo'),
+    sb.from('leads').select('*')
+  ]);
+  arenaData.vendedores = vends || [];
+  arenaData.leads = leads || [];
+  setSync(0);
+  renderArena();
+}
+
+function calcPontos(leads, meta) {
+  const vendas = leads.filter(l => l.etapa === 'venda').length;
+  const total = leads.length;
+  const conv = total ? vendas / total : 0;
+  const valor = leads.filter(l => l.etapa === 'venda').reduce((a, l) => a + (l.valor_estimado || 0), 0);
+  // Scoring: vendas x40, leads x5, conv x20pts per %, valor x0.001
+  return Math.round(vendas * 40 + total * 5 + conv * 2000 + valor * 0.001);
+}
+
+function getMesLeads(leads) {
+  const ini = new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
+  return leads.filter(l => new Date(l.created_at) >= ini);
+}
+
+function calcBadges(v, vLeads, allVends, allLeads) {
+  const badges = [];
+  const ini = new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
+  const mesLeads = getMesLeads(vLeads);
+  const vendas = mesLeads.filter(l => l.etapa === 'venda').length;
+  const meta = v.meta_mensal || 10;
+
+  // 🥇 Campeão do mês
+  const ranked = allVends.map(x => {
+    const xl = getMesLeads(allLeads.filter(l => l.vendedor_id === x.id));
+    return { id: x.id, vendas: xl.filter(l => l.etapa === 'venda').length };
+  }).sort((a, b) => b.vendas - a.vendas);
+  if (ranked[0]?.id === v.id && vendas > 0) badges.push({ icon: '🥇', name: 'Campeão do Mês', desc: 'Mais vendas no mês' });
+
+  // 🎯 Bateu a meta
+  if (vendas >= meta) badges.push({ icon: '🎯', name: 'Meta Batida', desc: `${vendas}/${meta} vendas` });
+
+  // 🚀 Mais leads cadastrados
+  const maxLeads = Math.max(...allVends.map(x => getMesLeads(allLeads.filter(l => l.vendedor_id === x.id)).length));
+  if (mesLeads.length === maxLeads && mesLeads.length > 0) badges.push({ icon: '🚀', name: 'Caçador de Leads', desc: `${mesLeads.length} leads no mês` });
+
+  // 💎 Maior ticket médio
+  const vendidos = mesLeads.filter(l => l.etapa === 'venda' && l.valor_estimado);
+  const ticketMed = vendidos.length ? vendidos.reduce((a, l) => a + l.valor_estimado, 0) / vendidos.length : 0;
+  const maxTicket = Math.max(...allVends.map(x => {
+    const xl = getMesLeads(allLeads.filter(l => l.vendedor_id === x.id)).filter(l => l.etapa === 'venda' && l.valor_estimado);
+    return xl.length ? xl.reduce((a, l) => a + l.valor_estimado, 0) / xl.length : 0;
+  }));
+  if (ticketMed > 0 && ticketMed === maxTicket) badges.push({ icon: '💎', name: 'Maior Ticket', desc: 'R$ ' + fmtNum(ticketMed) + ' médio' });
+
+  // ⚡ Mais rápido (lead → venda com menor tempo médio)
+  // Approximate by counting entries with valor
+  const rapido = allVends.map(x => {
+    const xl = getMesLeads(allLeads.filter(l => l.vendedor_id === x.id && l.etapa === 'venda'));
+    return { id: x.id, cnt: xl.length };
+  }).sort((a, b) => b.cnt - a.cnt);
+  if (rapido[0]?.id === v.id && rapido[0].cnt > 0) badges.push({ icon: '⚡', name: 'Mais Veloz', desc: 'Fechamentos mais rápidos' });
+
+  // 🔥 Sequência ativa (lançou lead hoje E ontem)
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
+  const temHoje = vLeads.some(l => new Date(l.created_at) >= hoje);
+  const temOntem = vLeads.some(l => new Date(l.created_at) >= ontem && new Date(l.created_at) < hoje);
+  if (temHoje && temOntem) badges.push({ icon: '🔥', name: 'Em Chamas', desc: 'Ativo múltiplos dias seguidos' });
+
+  return badges;
+}
+
+function renderArena() {
+  const hoje = new Date();
+  const mes = hoje.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  document.getElementById('arenaPeriodo').textContent = '📅 ' + mes.charAt(0).toUpperCase() + mes.slice(1);
+
+  if (arenaView === 'vendedores') renderArenaVendedores();
+  else renderArenaLojas();
+}
+
+function renderArenaVendedores() {
+  const { vendedores, leads } = arenaData;
+  const ini = new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
+
+  const ranked = vendedores.map(v => {
+    const vl = leads.filter(l => l.vendedor_id === v.id);
+    const mesLeads = getMesLeads(vl);
+    const vendas = mesLeads.filter(l => l.etapa === 'venda').length;
+    const total = mesLeads.length;
+    const conv = total ? Math.round(vendas / total * 100) : 0;
+    const valor = mesLeads.filter(l => l.etapa === 'venda').reduce((a, l) => a + (l.valor_estimado || 0), 0);
+    const pts = calcPontos(mesLeads, v.meta_mensal || 10);
+    const badges = calcBadges(v, vl, vendedores, leads);
+    return { ...v, mesLeads: total, vendas, conv, valor, pts, badges };
+  }).sort((a, b) => b.pts - a.pts);
+
+  renderArenaKpis(ranked);
+  renderPodium(ranked);
+  renderRankTable(ranked);
+  renderBadgesWall(ranked, vendedores, leads);
+}
+
+function renderArenaLojas() {
+  const { vendedores, leads } = arenaData;
+  const lojas = ['Boa Vista', 'Shopping SL', 'Assaí Minas'];
+  const ranked = lojas.map(lj => {
+    const ljLeads = getMesLeads(leads.filter(l => {
+      const v = vendedores.find(x => x.id === l.vendedor_id);
+      return (l.loja || v?.loja) === lj;
+    }));
+    const vendas = ljLeads.filter(l => l.etapa === 'venda').length;
+    const conv = ljLeads.length ? Math.round(vendas / ljLeads.length * 100) : 0;
+    const valor = ljLeads.filter(l => l.etapa === 'venda').reduce((a, l) => a + (l.valor_estimado || 0), 0);
+    const pts = Math.round(vendas * 40 + ljLeads.length * 5 + conv * 20 + valor * 0.001);
+    return { nome: lj, loja: lj, mesLeads: ljLeads.length, vendas, conv, valor, pts, badges: [] };
+  }).sort((a, b) => b.pts - a.pts);
+
+  renderArenaKpis(ranked);
+  renderPodium(ranked);
+  // Table for lojas (no badges col)
+  const maxPts = ranked[0]?.pts || 1;
+  document.getElementById('arenaBody').innerHTML = ranked.map((r, i) => {
+    const cls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+    const barW = Math.round(r.pts / maxPts * 100);
+    return `<tr>
+      <td><span class="arena-rank-num ${cls}">${medal || (i+1)}</span></td>
+      <td><strong>${esc(r.nome)}</strong></td>
+      <td>—</td>
+      <td style="font-family:'DM Mono',monospace;">${r.mesLeads}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:700;">${r.vendas}</td>
+      <td style="font-weight:700;color:${r.conv>=30?'#018a6b':'var(--muted)'};">${r.conv}%</td>
+      <td style="font-family:'DM Mono',monospace;">R$ ${fmtNum(r.valor)}</td>
+      <td><div class="arena-bar-wrap"><div class="arena-bar-track"><div class="arena-bar-fill" style="width:${barW}%;"></div></div><span class="arena-pts">${r.pts}</span></div></td>
+      <td>—</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('badgesWall').innerHTML = '<div style="color:var(--muted);font-size:13px;">Conquistas disponíveis para ranking de vendedores.</div>';
+}
+
+function renderArenaKpis(ranked) {
+  const top = ranked[0];
+  const totalVendas = ranked.reduce((a, r) => a + r.vendas, 0);
+  const totalLeads = ranked.reduce((a, r) => a + r.mesLeads, 0);
+  const totalValor = ranked.reduce((a, r) => a + r.valor, 0);
+  document.getElementById('arenaKpis').innerHTML = `
+    <div class="arena-kpi gold"><div class="arena-kpi-val">🥇 ${esc(top?.nome?.split(' ')[0] || '—')}</div><div class="arena-kpi-label">Líder do Mês</div></div>
+    <div class="arena-kpi mint"><div class="arena-kpi-val">${totalVendas}</div><div class="arena-kpi-label">Vendas no Mês</div></div>
+    <div class="arena-kpi"><div class="arena-kpi-val">${totalLeads}</div><div class="arena-kpi-label">Leads Lançados</div></div>
+    <div class="arena-kpi orange"><div class="arena-kpi-val">R$ ${fmtNum(totalValor)}</div><div class="arena-kpi-label">Volume Vendido</div></div>
+  `;
+}
+
+function renderPodium(ranked) {
+  const top3 = [ranked[1], ranked[0], ranked[2]]; // 2nd, 1st, 3rd layout
+  const blocks = ['b2', 'b1', 'b3'];
+  const avatarCls = ['p2', 'p1', 'p3'];
+  const positions = ['2º', '1º', '3º'];
+  const crowns = ['', '👑', ''];
+
+  document.getElementById('arenaPodium').innerHTML = top3.map((r, i) => {
+    if (!r) return `<div class="podium-slot"><div class="podium-slot-empty"></div></div>`;
+    const initials = r.nome.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    return `<div class="podium-slot">
+      <div class="podium-avatar ${avatarCls[i]}">${crowns[i] ? `<div class="podium-crown">${crowns[i]}</div>` : ''}${initials}</div>
+      <div class="podium-name">${esc(r.nome.split(' ')[0])}</div>
+      <div class="podium-loja">${esc(r.loja || '—')}</div>
+      <div class="podium-pts">${r.pts} pts</div>
+      <div class="podium-block ${blocks[i]}"><div class="podium-pos">${positions[i]}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderRankTable(ranked) {
+  const maxPts = ranked[0]?.pts || 1;
+  document.getElementById('arenaBody').innerHTML = ranked.map((r, i) => {
+    const isMe = currentUser && r.id === currentUser.id;
+    const cls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+    const barW = Math.round(r.pts / maxPts * 100);
+    const bpills = r.badges.slice(0, 3).map(b => `<span class="badge-pill" title="${b.desc}">${b.icon}</span>`).join('');
+    return `<tr class="${isMe ? 'me' : ''}">
+      <td><span class="arena-rank-num ${cls}">${medal}</span></td>
+      <td><strong>${esc(r.nome)}${isMe ? ' <span style="font-size:10px;color:var(--teal);">(você)</span>' : ''}</strong></td>
+      <td style="font-size:12px;color:var(--muted);">${esc(r.loja || '—')}</td>
+      <td style="font-family:'DM Mono',monospace;">${r.mesLeads}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:700;">${r.vendas}</td>
+      <td style="font-weight:700;color:${r.conv >= 30 ? '#018a6b' : 'var(--muted)'};">${r.conv}%</td>
+      <td style="font-family:'DM Mono',monospace;">R$ ${fmtNum(r.valor)}</td>
+      <td><div class="arena-bar-wrap"><div class="arena-bar-track"><div class="arena-bar-fill" style="width:${barW}%;"></div></div><span class="arena-pts">${r.pts}</span></div></td>
+      <td>${bpills || '<span style="color:var(--muted);font-size:11px;">—</span>'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted);">Nenhum dado ainda</td></tr>';
+}
+
+function renderBadgesWall(ranked, vendedores, leads) {
+  const defs = [
+    { icon: '🥇', name: 'Campeão do Mês', key: 'Campeão do Mês' },
+    { icon: '🎯', name: 'Meta Batida', key: 'Meta Batida' },
+    { icon: '🚀', name: 'Caçador de Leads', key: 'Caçador de Leads' },
+    { icon: '💎', name: 'Maior Ticket', key: 'Maior Ticket' },
+    { icon: '⚡', name: 'Mais Veloz', key: 'Mais Veloz' },
+    { icon: '🔥', name: 'Em Chamas', key: 'Em Chamas' },
+  ];
+
+  document.getElementById('badgesWall').innerHTML = defs.map(def => {
+    const winner = ranked.find(r => r.badges.some(b => b.name === def.key));
+    const bdata = winner?.badges.find(b => b.name === def.key);
+    return `<div class="badge-card ${winner ? '' : 'empty'}">
+      <div class="badge-icon">${def.icon}</div>
+      <div>
+        <div class="badge-info-name">${def.name}</div>
+        <div class="badge-info-who">${winner ? esc(winner.nome.split(' ')[0]) : 'Ninguém ainda'}</div>
+        <div class="badge-info-desc">${bdata?.desc || 'Conquista disponível'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
 
 function daysSince(ts){return Math.floor((Date.now()-new Date(ts).getTime())/86400000);}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
