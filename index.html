@@ -60,7 +60,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .kpi-card.green .kpi-val{color:#018a6b;}
 .kpi-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:5px;}
 .kpi-sub{font-size:11px;color:var(--muted);margin-top:2px;}
-.kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start;}
+.kanban{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:start;}
 .col{background:var(--surface);border-radius:13px;box-shadow:var(--sh);overflow:hidden;}
 .col-hd{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
 .col-hd-title{font-size:11px;font-weight:800;font-family:'Syne',sans-serif;text-transform:uppercase;letter-spacing:.6px;}
@@ -70,6 +70,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .c-oferta .col-hd{background:#1C729310;} .c-oferta .col-hd-title{color:#1C7293;}
 .c-negoc .col-hd{background:#F4A26115;} .c-negoc .col-hd-title{color:#b8722a;}
 .c-venda .col-hd{background:#02C39A15;} .c-venda .col-hd-title{color:#018a6b;}
+.c-perdido .col-hd{background:#E5393515;} .c-perdido .col-hd-title{color:#E53935;}
 .col-body{padding:10px;min-height:100px;}
 .col-body.drag-over{background:#e4fff7;border-radius:8px;}
 .lead-card{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all .15s;position:relative;animation:cardIn .2s ease;}
@@ -280,7 +281,7 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
           <select id="loginLoja"><option value="">Loja...</option><option>Boa Vista</option><option>Shopping SL</option><option>Assaí Minas</option></select>
           <select id="loginRole" style="display:none;"><option value="vendedor">Vendedor</option></select>
         </div>
-        <input type="number" id="loginMeta" placeholder="Meta mensal (nº de vendas)" style="width:100%;margin-bottom:10px;"/>
+        
         <input type="password" id="loginNovaSenha" placeholder="Crie uma senha (mín. 4 caracteres)" style="width:100%;margin-bottom:6px;"/>
         <input type="password" id="loginConfSenha" placeholder="Confirme a senha" style="width:100%;margin-bottom:10px;"/>
         <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doCadastro()">Solicitar Acesso →</button>
@@ -332,7 +333,7 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
 
   <!-- KANBAN -->
   <div class="view active" id="view-kanban">
-    <div class="kpi-strip cols-5" id="myKpis"></div>
+    <div class="kpi-strip" style="grid-template-columns:repeat(6,1fr);" id="myKpis"></div>
     <div class="filter-bar">
       <label>Filtro:</label>
       <input type="text" id="kSearch" placeholder="Buscar lead…" oninput="renderKanban()" style="width:180px;"/>
@@ -348,6 +349,7 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
       <div class="col c-oferta"><div class="col-hd"><span class="col-hd-title">3. Oferta</span><span class="col-cnt" id="cc-oferta">0</span></div><div class="col-body" id="cb-oferta" ondragover="dragOver(event)" ondrop="drop(event,'oferta')" ondragleave="dragLeave(event)"></div></div>
       <div class="col c-negoc"><div class="col-hd"><span class="col-hd-title">4. Negociação</span><span class="col-cnt" id="cc-negoc">0</span></div><div class="col-body" id="cb-negoc" ondragover="dragOver(event)" ondrop="drop(event,'negoc')" ondragleave="dragLeave(event)"></div></div>
       <div class="col c-venda"><div class="col-hd"><span class="col-hd-title">5. Venda ✓</span><span class="col-cnt" id="cc-venda">0</span></div><div class="col-body" id="cb-venda" ondragover="dragOver(event)" ondrop="drop(event,'venda')" ondragleave="dragLeave(event)"></div></div>
+      <div class="col c-perdido"><div class="col-hd"><span class="col-hd-title">Perdido ✗</span><span class="col-cnt" id="cc-perdido">0</span></div><div class="col-body" id="cb-perdido" ondragover="dragOver(event)" ondrop="drop(event,'perdido')" ondragleave="dragLeave(event)"></div></div>
     </div>
   </div>
 
@@ -357,7 +359,7 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
       <input type="text" id="lSearch" placeholder="Buscar…" oninput="renderLista()" style="width:180px;"/>
       <select id="lEtapa" onchange="renderLista()">
         <option value="">Todas as etapas</option>
-        <option value="entrada">Entrada</option><option value="qualif">Qualificação</option><option value="oferta">Oferta</option><option value="negoc">Negociação</option><option value="venda">Venda</option>
+        <option value="entrada">Entrada</option><option value="qualif">Qualificação</option><option value="oferta">Oferta</option><option value="negoc">Negociação</option><option value="venda">Venda</option><option value="perdido">Perdido</option>
       </select>
     </div>
     <div style="background:var(--surface);border-radius:14px;box-shadow:var(--sh);overflow:auto;">
@@ -373,7 +375,7 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
       <div class="dash-card"><div class="dash-card-title"><span>🏆</span> Ranking Vendedores</div><div id="dashRanking"></div></div>
       <div class="dash-card"><div class="dash-card-title"><span>🚨</span> Leads Parados +3 dias</div><div id="dashAlertas"></div></div>
       <div class="dash-card"><div class="dash-card-title"><span>🎯</span> Meta vs Realizado</div><div id="dashMeta"></div></div>
-      <div class="dash-card"><div class="dash-card-title"><span>🏪</span> Volume por Loja</div><table class="loja-table"><thead><tr><th>Loja</th><th>Total</th><th>Vendas</th><th>Conv.</th></tr></thead><tbody id="dashLojaTbody"></tbody></table></div>
+      <div class="dash-card"><div class="dash-card-title"><span>🏪</span> Volume por Loja</div><table class="loja-table"><thead><tr><th>Loja</th><th>Leads</th><th>Vendas</th><th>Conv.</th><th>Valor Real.</th><th>% Meta</th></tr></thead><tbody id="dashLojaTbody"></tbody></table></div>
       <div class="dash-card"><div class="dash-card-title"><span>✨</span> Leads Novos</div><div id="dashNovos"></div></div>
     </div>
     <div style="text-align:right;margin-top:10px;"><button class="btn btn-ghost btn-sm" onclick="loadDashboard()">↻ Atualizar</button></div>
@@ -413,7 +415,7 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
     <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px;">👥 Equipe Ativa</div>
     <div style="background:var(--surface);border-radius:14px;box-shadow:var(--sh);overflow:hidden;">
       <table class="all-table">
-        <thead><tr><th>Vendedor</th><th>Loja</th><th>Função</th><th>Status</th><th>Meta</th><th>Vendas Mês</th><th>% Meta</th><th>Conv.</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Vendedor</th><th>Loja</th><th>Função</th><th>Status</th><th>Meta Vendas</th><th>Meta Valor</th><th>Realizado</th><th>% Meta Valor</th><th>Conv.</th><th>Ações</th></tr></thead>
         <tbody id="equipeTbody"><tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted);">Clique em ↻ Atualizar para carregar</td></tr></tbody>
       </table>
     </div>
@@ -475,7 +477,7 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
       </div>
       <div class="form-row">
         <div class="fgroup"><label>Etapa</label>
-          <select id="fEtapa"><option value="entrada">1. Entrada</option><option value="qualif">2. Qualificação</option><option value="oferta">3. Oferta</option><option value="negoc">4. Negociação</option><option value="venda">5. Venda Realizada</option></select>
+          <select id="fEtapa"><option value="entrada">1. Entrada</option><option value="qualif">2. Qualificação</option><option value="oferta">3. Oferta</option><option value="negoc">4. Negociação</option><option value="venda">5. Venda Realizada</option><option value="perdido">Perdido ✗</option></select>
         </div>
         <div class="fgroup"><label>Loja</label>
           <select id="fLoja"><option value="">—</option><option>Boa Vista</option><option>Shopping SL</option><option>Assaí Minas</option></select>
@@ -517,6 +519,14 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
         </div>
       </div>
       <div class="form-row">
+        <div class="fgroup"><label>Meta de Valor Mensal (R$)</label>
+          <input type="number" id="vMetaValor" min="0" placeholder="Ex: 50000"/>
+        </div>
+        <div class="fgroup"><label>&nbsp;</label>
+          <div style="background:#EEF1F8;border-radius:9px;padding:10px 12px;font-size:11px;color:var(--muted);">💡 Valor total em vendas que o consultor deve atingir no mês</div>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="fgroup"><label>Função</label>
           <select id="vRole"><option value="vendedor">Vendedor</option><option value="gestor">Gestor</option></select>
         </div>
@@ -543,9 +553,9 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
 <div class="toast" id="toast"></div>
 
 <script>
-const STAGES=['entrada','qualif','oferta','negoc','venda'];
-const SL={entrada:'1. Entrada',qualif:'2. Qualificação',oferta:'3. Oferta',negoc:'4. Negociação',venda:'5. Venda ✓'};
-const SC={entrada:'#0F1F45',qualif:'#028090',oferta:'#1C7293',negoc:'#F4A261',venda:'#02C39A'};
+const STAGES=['entrada','qualif','oferta','negoc','venda','perdido'];
+const SL={entrada:'1. Entrada',qualif:'2. Qualificação',oferta:'3. Oferta',negoc:'4. Negociação',venda:'5. Venda ✓',perdido:'Perdido ✗'};
+const SC={entrada:'#0F1F45',qualif:'#028090',oferta:'#1C7293',negoc:'#F4A261',venda:'#02C39A',perdido:'#E53935'};
 const _SB_URL='https://chbrdzzpypvwfpqonfqs.supabase.co';
 const _SB_KEY='sb_publishable_cG7kdMSBRAnADtwQdqTHWw_eF8mZ0ij';
 
@@ -592,7 +602,6 @@ async function doLogin(){
 async function doCadastro(){
   const nome=document.getElementById('loginNome').value.trim();
   const loja=document.getElementById('loginLoja').value;
-  const meta=parseInt(document.getElementById('loginMeta').value)||10;
   const senha=document.getElementById('loginNovaSenha').value;
   const conf=document.getElementById('loginConfSenha').value;
   if(!nome){toast('Informe seu nome','error');return;}
@@ -600,7 +609,7 @@ async function doCadastro(){
   if(senha!==conf){toast('As senhas não coincidem','error');return;}
   const hash=await hashSenha(senha);
   const email=nome.toLowerCase().replace(/\s+/g,'.')+'.'+Date.now()+'@cvm.local';
-  const{data,error}=await sb.from('vendedores').insert({nome,loja,meta_mensal:meta,email,senha_hash:hash,status:'pendente',role:'vendedor'}).select().single();
+  const{data,error}=await sb.from('vendedores').insert({nome,loja,meta_mensal:10,meta_valor:0,email,senha_hash:hash,status:'pendente',role:'vendedor'}).select().single();
   if(error){toast('Erro: '+error.message,'error');return;}
   toast('Cadastro solicitado! Aguarde a aprovação do gestor.','success');
   toggleNewUser();
@@ -687,10 +696,69 @@ async function drop(e,stage){
 }
 
 function renderMyKpis(){
-  const total=myLeads.length,vendas=myLeads.filter(l=>l.etapa==='venda').length,conv=total?Math.round(vendas/total*100):0;
-  const urg=myLeads.filter(l=>daysSince(l.created_at)>=3&&l.etapa!=='venda').length;
-  const val=myLeads.filter(l=>l.etapa==='venda').reduce((a,l)=>a+(l.valor_estimado||0),0);
-  document.getElementById('myKpis').innerHTML=`<div class="kpi-card"><div class="kpi-val">${total}</div><div class="kpi-label">Leads Totais</div></div><div class="kpi-card green"><div class="kpi-val">${vendas}</div><div class="kpi-label">Vendas</div><div class="kpi-sub">Meta: ${currentUser.meta_mensal||10}</div></div><div class="kpi-card"><div class="kpi-val">${conv}%</div><div class="kpi-label">Conversão</div></div><div class="kpi-card ${urg?'red':''}"><div class="kpi-val">${urg}</div><div class="kpi-label">Parados +3d</div></div><div class="kpi-card orange"><div class="kpi-val">R$ ${fmtNum(val)}</div><div class="kpi-label">Valor Vendido</div></div>`;
+  const ini=new Date();ini.setDate(1);ini.setHours(0,0,0,0);
+  const mesLeads=myLeads.filter(l=>new Date(l.created_at)>=ini);
+  const total=myLeads.length;
+  const vendas=mesLeads.filter(l=>l.etapa==='venda').length;
+  const conv=mesLeads.length?Math.round(vendas/mesLeads.length*100):0;
+  const metaVendas=currentUser.meta_mensal||10;
+  const metaValor=currentUser.meta_valor||0;
+
+  // Valor realizado (vendas do mês)
+  const valRealizado=mesLeads.filter(l=>l.etapa==='venda').reduce((a,l)=>a+(l.valor_estimado||0),0);
+  // Pipeline ativo (todos exceto venda e perdido)
+  const valPipeline=myLeads.filter(l=>l.etapa!=='venda'&&l.etapa!=='perdido').reduce((a,l)=>a+(l.valor_estimado||0),0);
+  // Parados +3d (exceto venda e perdido)
+  const parados=myLeads.filter(l=>daysSince(l.created_at)>=3&&l.etapa!=='venda'&&l.etapa!=='perdido');
+  const valParados=parados.reduce((a,l)=>a+(l.valor_estimado||0),0);
+  // Perdidos do mês
+  const valPerdido=mesLeads.filter(l=>l.etapa==='perdido').reduce((a,l)=>a+(l.valor_estimado||0),0);
+  // Faltante para meta
+  const valFaltante=Math.max(0,metaValor-valRealizado);
+  const pctValor=metaValor>0?Math.min(Math.round(valRealizado/metaValor*100),100):0;
+  const pctVendas=Math.min(Math.round(vendas/metaVendas*100),100);
+  const colorVal=pctValor>=100?'green':pctValor>=60?'':'orange';
+  const colorVend=pctVendas>=100?'green':pctVendas>=60?'':'orange';
+
+  document.getElementById('myKpis').innerHTML=`
+    <div class="kpi-card ${colorVal}" style="grid-column:span 2;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="kpi-label">💰 Valor Realizado vs Meta</div>
+          <div class="kpi-val" style="font-size:22px;margin-top:4px;">R$ ${fmtNum(valRealizado)}</div>
+          <div class="kpi-sub">Meta: R$ ${fmtNum(metaValor)} · Faltam R$ ${fmtNum(valFaltante)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:'DM Mono',monospace;font-size:26px;font-weight:800;color:${pctValor>=100?'#018a6b':pctValor>=60?'var(--teal)':'var(--orange)'};">${pctValor}%</div>
+          <div class="kpi-sub">da meta de valor</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;background:var(--bg);border-radius:20px;height:8px;overflow:hidden;">
+        <div style="width:${pctValor}%;height:100%;border-radius:20px;background:${pctValor>=100?'var(--mint)':pctValor>=60?'var(--teal)':'var(--orange)'};transition:width .8s ease;"></div>
+      </div>
+    </div>
+    <div class="kpi-card ${colorVend}">
+      <div class="kpi-label">🎯 Vendas vs Meta</div>
+      <div class="kpi-val" style="margin-top:4px;">${vendas}<span style="font-size:14px;font-weight:600;color:var(--muted);">/${metaVendas}</span></div>
+      <div style="margin-top:8px;background:var(--bg);border-radius:20px;height:6px;overflow:hidden;"><div style="width:${pctVendas}%;height:100%;border-radius:20px;background:${pctVendas>=100?'var(--mint)':pctVendas>=60?'var(--teal)':'var(--orange)'};"></div></div>
+      <div class="kpi-sub" style="margin-top:4px;">${pctVendas}% da meta</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">⏳ Pipeline Ativo</div>
+      <div class="kpi-val" style="font-size:20px;margin-top:4px;">R$ ${fmtNum(valPipeline)}</div>
+      <div class="kpi-sub">${myLeads.filter(l=>l.etapa!=='venda'&&l.etapa!=='perdido').length} oportunidades</div>
+    </div>
+    <div class="kpi-card ${parados.length?'red':''}">
+      <div class="kpi-label">🔴 Parados +3 dias</div>
+      <div class="kpi-val" style="font-size:20px;margin-top:4px;">R$ ${fmtNum(valParados)}</div>
+      <div class="kpi-sub">${parados.length} leads parados</div>
+    </div>
+    <div class="kpi-card ${valPerdido>0?'red':''}">
+      <div class="kpi-label">❌ Perdidos no Mês</div>
+      <div class="kpi-val" style="font-size:20px;margin-top:4px;">R$ ${fmtNum(valPerdido)}</div>
+      <div class="kpi-sub">${mesLeads.filter(l=>l.etapa==='perdido').length} oportunidades</div>
+    </div>
+  `;
 }
 
 function renderLista(){
@@ -713,8 +781,47 @@ function renderDashboard(){
   document.getElementById('dashRanking').innerHTML=ranked.slice(0,10).map((v,i)=>`<div class="rank-row"><div class="rank-num">${i+1}</div><div><div class="rank-name">${esc(v.nome)}</div><div style="font-size:10px;color:var(--muted);">${v.loja||'—'}</div></div><div class="rank-bar-wrap"><div class="rank-bar" style="width:${Math.round(v.vendas/maxR*100)}%;background:${i===0?'var(--mint)':'var(--teal)'};"></div></div><div class="rank-cnt">${v.vendas}</div><div class="rank-conv">${v.conv}%</div></div>`).join('')||'<div style="color:var(--muted);font-size:12px;">Sem dados</div>';
   const alts=leads.filter(l=>daysSince(l.created_at)>=3&&l.etapa!=='venda').sort((a,b)=>daysSince(b.created_at)-daysSince(a.created_at)).slice(0,8);
   document.getElementById('dashAlertas').innerHTML=alts.length?alts.map(l=>`<div class="alert-row"><div style="flex:1;"><div class="al-name">${esc(l.nome)}</div><div class="al-sub">${esc(l.vendedores?.nome||'—')} · ${SL[l.etapa]}</div></div><div class="al-days">${daysSince(l.created_at)}d</div></div>`).join(''):'<div style="color:var(--mint);font-size:13px;font-weight:600;">✓ Nenhum lead parado!</div>';
-  document.getElementById('dashMeta').innerHTML=ranked.map(v=>{const meta=v.meta_mensal||10,pct=Math.min(Math.round(v.vendas/meta*100),100),color=pct>=100?'var(--mint)':pct>=60?'var(--teal)':'var(--orange)';return`<div class="meta-row"><div class="meta-name">${esc(v.nome)}</div><div class="meta-prog-wrap"><div class="meta-prog" style="width:${pct}%;background:${color};"></div></div><div class="meta-nums">${v.vendas}/${meta}</div></div>`;}).join('')||'<div style="color:var(--muted);font-size:12px;">Sem dados</div>';
-  document.getElementById('dashLojaTbody').innerHTML=['Boa Vista','Shopping SL','Assaí Minas'].map(lj=>{const ll=leads.filter(l=>(l.loja||l.vendedores?.loja)===lj),vnd=ll.filter(l=>l.etapa==='venda').length,c=ll.length?Math.round(vnd/ll.length*100):0;return`<tr><td>${lj}</td><td>${ll.length}</td><td>${vnd}</td><td style="color:${c>=30?'#018a6b':'var(--red)'};font-weight:700;">${c}%</td></tr>`;}).join('');
+  document.getElementById('dashMeta').innerHTML=ranked.map(v=>{
+    const meta=v.meta_mensal||10,metaValor=v.meta_valor||0;
+    const pctVend=Math.min(Math.round(v.vendas/meta*100),100);
+    const valReal=leads.filter(l=>l.vendedor_id===v.id&&l.etapa==='venda').reduce((a,l)=>a+(l.valor_estimado||0),0);
+    const pctVal=metaValor>0?Math.min(Math.round(valReal/metaValor*100),100):0;
+    const cV=pctVend>=100?'var(--mint)':pctVend>=60?'var(--teal)':'var(--orange)';
+    const cR=pctVal>=100?'var(--mint)':pctVal>=60?'var(--teal)':'var(--orange)';
+    return`<div class="meta-row" style="flex-direction:column;align-items:flex-start;gap:5px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+        <div class="meta-name">${esc(v.nome)}</div>
+        <div style="font-size:10px;color:var(--muted);">${esc(v.loja||'')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;width:100%;">
+        <div style="font-size:10px;color:var(--muted);width:50px;">Vendas</div>
+        <div class="meta-prog-wrap" style="flex:1;"><div class="meta-prog" style="width:${pctVend}%;background:${cV};"></div></div>
+        <div class="meta-nums">${v.vendas}/${meta}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;width:100%;">
+        <div style="font-size:10px;color:var(--muted);width:50px;">Valor</div>
+        <div class="meta-prog-wrap" style="flex:1;"><div class="meta-prog" style="width:${pctVal}%;background:${cR};"></div></div>
+        <div class="meta-nums" style="font-size:10px;">R$${fmtNum(valReal)}</div>
+      </div>
+    </div>`;
+  }).join('')||'<div style="color:var(--muted);font-size:12px;">Sem dados</div>';
+  document.getElementById('dashLojaTbody').innerHTML=['Boa Vista','Shopping SL','Assaí Minas'].map(lj=>{
+    const ljVends=allVendedores.filter(v=>(v.loja||'')=== lj&&(v.status==='ativo'));
+    const metaLojaValor=ljVends.reduce((a,v)=>a+(v.meta_valor||0),0);
+    const ll=leads.filter(l=>{const v=allVendedores.find(x=>x.id===l.vendedor_id);return(l.loja||v?.loja)===lj;});
+    const vnd=ll.filter(l=>l.etapa==='venda').length;
+    const valReal=ll.filter(l=>l.etapa==='venda').reduce((a,l)=>a+(l.valor_estimado||0),0);
+    const c=ll.length?Math.round(vnd/ll.length*100):0;
+    const pctV=metaLojaValor>0?Math.min(Math.round(valReal/metaLojaValor*100),100):0;
+    const col=pctV>=100?'#018a6b':pctV>=60?'var(--teal)':'var(--orange)';
+    return`<tr>
+      <td><strong>${lj}</strong></td>
+      <td>${ll.length}</td><td>${vnd}</td>
+      <td style="color:${c>=30?'#018a6b':'var(--red)'};font-weight:700;">${c}%</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;">R$ ${fmtNum(valReal)}<br><span style="color:var(--muted)">/ R$ ${fmtNum(metaLojaValor)}</span></td>
+      <td><div style="display:flex;align-items:center;gap:4px;"><div style="width:50px;background:var(--bg);border-radius:20px;height:5px;overflow:hidden;"><div style="width:${pctV}%;height:100%;background:${col};border-radius:20px;"></div></div><span style="font-size:10px;font-weight:700;color:${col};">${pctV}%</span></div></td>
+    </tr>`;
+  }).join('');
   document.getElementById('dashNovos').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div style="text-align:center;padding:16px;background:var(--bg);border-radius:10px;"><div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--navy);">${novosHoje}</div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-top:4px;">Hoje</div></div><div style="text-align:center;padding:16px;background:var(--bg);border-radius:10px;"><div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--teal);">${novosSem}</div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-top:4px;">Esta Semana</div></div></div>`;
 }
 
@@ -795,6 +902,7 @@ function openVendedor(id){
   document.getElementById('vNome').value=v.nome||'';
   document.getElementById('vLoja').value=v.loja||'';
   document.getElementById('vMeta').value=v.meta_mensal||10;
+  document.getElementById('vMetaValor').value=v.meta_valor||0;
   document.getElementById('vRole').value=v.role||'vendedor';
   document.getElementById('vStatus').value=v.status||'ativo';
   document.getElementById('vNovaSenha').value='';
@@ -806,10 +914,11 @@ async function saveVendedor(){
   if(!editingVendedorId)return;
   const loja=document.getElementById('vLoja').value;
   const meta=parseInt(document.getElementById('vMeta').value)||10;
+  const metaValor=parseFloat(document.getElementById('vMetaValor').value)||0;
   const role=document.getElementById('vRole').value;
   const status=document.getElementById('vStatus').value;
   const novaSenha=document.getElementById('vNovaSenha').value;
-  const update={loja,meta_mensal:meta,role,status};
+  const update={loja,meta_mensal:meta,meta_valor:metaValor,role,status};
   if(novaSenha){
     if(novaSenha.length<4){toast('Senha deve ter pelo menos 4 caracteres','error');return;}
     update.senha_hash=await hashSenha(novaSenha);
