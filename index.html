@@ -872,12 +872,16 @@ function setArenaView(v) {
 
 async function loadArena() {
   setSync(1);
-  const [{ data: vends }, { data: leads }] = await Promise.all([
-    sb.from('vendedores').select('*').eq('status', 'ativo'),
-    sb.from('leads').select('*')
-  ]);
-  arenaData.vendedores = vends || [];
-  arenaData.leads = leads || [];
+  try {
+    const [r1, r2] = await Promise.all([
+      sb.from('vendedores').select('*').eq('status','ativo').order('nome'),
+      sb.from('leads').select('id,vendedor_id,etapa,loja,canal,created_at,updated_at,valor_estimado')
+    ]);
+    arenaData.vendedores = r1.data || [];
+    arenaData.leads = r2.data || [];
+  } catch(e) {
+    console.error('Arena load error:', e);
+  }
   setSync(0);
   renderArena();
 }
@@ -892,7 +896,8 @@ function calcPontos(leads, meta) {
 }
 
 function getMesLeads(leads) {
-  const ini = new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
+  const n = new Date();
+  const ini = new Date(n.getFullYear(), n.getMonth(), 1);
   return leads.filter(l => new Date(l.created_at) >= ini);
 }
 
@@ -949,6 +954,14 @@ function renderArena() {
   const mes = hoje.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
   document.getElementById('arenaPeriodo').textContent = '📅 ' + mes.charAt(0).toUpperCase() + mes.slice(1);
 
+  if (!arenaData.vendedores.length) {
+    ['arenaPodium','arenaBody','badgesWall','arenaKpis'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">Carregando dados...</div>';
+    });
+    return;
+  }
+
   if (arenaView === 'vendedores') renderArenaVendedores();
   else renderArenaLojas();
 }
@@ -967,7 +980,7 @@ function renderArenaVendedores() {
     const pts = calcPontos(mesLeads, v.meta_mensal || 10);
     const badges = calcBadges(v, vl, vendedores, leads);
     return { ...v, mesLeads: total, vendas, conv, valor, pts, badges };
-  }).sort((a, b) => b.pts - a.pts);
+  }).sort((a, b) => b.pts - a.pts || a.nome.localeCompare(b.nome));
 
   renderArenaKpis(ranked);
   renderPodium(ranked);
