@@ -76,6 +76,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .lead-card{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all .15s;position:relative;animation:cardIn .2s ease;}
 @keyframes cardIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 .lead-card:hover{box-shadow:var(--sh-lg);border-color:var(--teal);transform:translateY(-1px);}
+.card-archive-btn{display:none;position:absolute;top:6px;left:6px;background:#E5393520;color:var(--red);border:1.5px solid #f5b4b2;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;z-index:10;gap:4px;align-items:center;}
+.card-archive-btn:hover{background:var(--red);color:#fff;}
+.lead-card:hover .card-archive-btn{display:flex;}
+.card-transfer-btn{display:none;position:absolute;top:6px;right:6px;background:var(--navy);color:#fff;border:none;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;z-index:10;gap:4px;align-items:center;}
+.card-transfer-btn:hover{background:var(--teal);}
+.lead-card:hover .card-transfer-btn{display:flex;}
+.modal-transfer{display:none;position:fixed;inset:0;background:rgba(15,31,69,.55);z-index:3000;align-items:center;justify-content:center;}
+.modal-transfer.open{display:flex;}
+.transfer-box{background:#fff;border-radius:16px;padding:28px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+.transfer-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--navy);margin-bottom:4px;}
+.transfer-sub{font-size:12px;color:var(--muted);margin-bottom:18px;}
+.transfer-select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:14px;color:var(--text);margin-bottom:16px;outline:none;}
+.transfer-select:focus{border-color:var(--teal);}
 .lead-card.dragging{opacity:.45;transform:rotate(1deg);}
 .lead-name{font-size:13px;font-weight:700;color:var(--navy);padding-right:32px;}
 .lead-dest{font-size:11px;color:var(--teal);font-weight:600;margin-top:2px;}
@@ -453,6 +466,18 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
   </div>
 </div>
 
+<!-- MODAL TRANSFERÊNCIA -->
+<div class="modal-transfer" id="modalTransfer">
+  <div class="transfer-box">
+    <div class="transfer-title">🔄 Transferir Lead</div>
+    <div class="transfer-sub" id="transferLeadName">Selecione o novo consultor responsável</div>
+    <select class="transfer-select" id="transferSelect"></select>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeTransfer()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmTransfer()">✅ Transferir</button>
+    </div>
+  </div>
+</div>
 <!-- MODAL LEAD -->
 <div class="overlay" id="leadOverlay" onclick="if(event.target===this)closeLead()">
   <div class="modal">
@@ -647,8 +672,8 @@ window.addEventListener('DOMContentLoaded',async()=>{
   if(uid){const{data}=await sb.from('vendedores').select('*').eq('id',uid).single();if(data&&data.status==='ativo'){currentUser=data;await enterApp();}}
 });
 
-async function loadMyLeads(){setSync(1);const{data}=await sb.from('leads').select('*,historico(*)').eq('vendedor_id',currentUser.id).order('created_at',{ascending:false});myLeads=data||[];setSync(0);renderKanban();renderMyKpis();renderLista();}
-async function loadAllLeads(){setSync(1);const{data}=await sb.from('leads').select('*,vendedores(nome,loja),historico(*)').order('created_at',{ascending:false});allLeads=data||[];setSync(0);renderTodosLeads();}
+async function loadMyLeads(){setSync(1);const{data}=await sb.from('leads').select('*,historico(*)').eq('vendedor_id',currentUser.id).order('created_at',{ascending:false});myLeads=(data||[]).filter(l=>!l.arquivado);setSync(0);renderKanban();renderMyKpis();renderLista();}
+async function loadAllLeads(){setSync(1);const{data}=await sb.from('leads').select('*,vendedores(nome,loja),historico(*)').order('created_at',{ascending:false});allLeads=(data||[]).filter(l=>!l.arquivado);setSync(0);renderTodosLeads();}
 async function loadDashboard(){await loadAllLeads();const{data}=await sb.from('vendedores').select('*').order('nome');allVendedores=data||[];renderDashboard();}
 function setSync(on){document.getElementById('syncIndicator').style.display=on?'':'none';}
 
@@ -676,7 +701,9 @@ function renderKanban(){
     items.forEach(l=>{
       const days=daysSince(l.created_at),alrt=days>=3&&s!=='venda';
       const div=document.createElement('div');div.className='lead-card';div.draggable=true;div.dataset.id=l.id;
-      div.innerHTML=`<div class="lead-days ${alrt?'alert':''}">${days}d</div><div class="lead-name">${esc(l.nome)}</div>${l.destino?`<div class="lead-dest">✈ ${esc(l.destino)}${l.periodo?' · '+esc(l.periodo):''}</div>`:''}<div class="lead-tags">${l.loja?`<span class="tag tag-loja">${esc(l.loja)}</span>`:''} ${l.canal?`<span class="tag tag-canal">${esc(l.canal)}</span>`:''} ${l.valor_estimado?`<span class="tag" style="background:#FEF3C7;color:#92400E;">R$ ${fmtNum(l.valor_estimado)}</span>`:''}</div>${l.notas?`<div class="lead-preview">${esc(l.notas)}</div>`:''}`;
+      const _tBtn = currentUser._isManager ? `<button class="card-transfer-btn" onclick="event.stopPropagation();openTransfer('${l.id}','${esc(l.nome)}')">🔄 Transferir</button>` : '';
+      const _aBtn = (currentUser._isManager && l.etapa==='perdido') ? `<button class="card-archive-btn" onclick="event.stopPropagation();archiveLead('${l.id}','${esc(l.nome)}')">📦 Arquivar</button>` : '';
+      div.innerHTML=`${_tBtn}${_aBtn}<div class="lead-days ${alrt?'alert':''}">${days}d</div><div class="lead-name">${esc(l.nome)}</div>${l.destino?`<div class="lead-dest">✈ ${esc(l.destino)}${l.periodo?' · '+esc(l.periodo):''}</div>`:''}<div class="lead-tags">${l.loja?`<span class="tag tag-loja">${esc(l.loja)}</span>`:''} ${l.canal?`<span class="tag tag-canal">${esc(l.canal)}</span>`:''} ${l.valor_estimado?`<span class="tag" style="background:#FEF3C7;color:#92400E;">R$ ${fmtNum(l.valor_estimado)}</span>`:''}</div>${l.notas?`<div class="lead-preview">${esc(l.notas)}</div>`:''}`;
       div.addEventListener('click',()=>openLead(l.id));
       div.addEventListener('dragstart',()=>{dragId=l.id;div.classList.add('dragging');});
       div.addEventListener('dragend',()=>div.classList.remove('dragging'));
@@ -960,6 +987,87 @@ async function saveLead(){
   document.getElementById('btnSave').textContent='Salvar Lead';document.getElementById('btnSave').disabled=false;
   if(err){toast('Erro: '+err.message,'error');return;}closeLead();await loadMyLeads();
 }
+// ── Arquivamento de leads (gestor only, somente Perdido) ──────
+async function archiveLead(leadId, leadNome) {
+  if(!currentUser._isManager) return;
+  if(!confirm(`Arquivar o lead "${leadNome}"?
+
+Ele sairá do funil mas ficará salvo no banco de dados.`)) return;
+
+  await sb.from('leads').update({ arquivado: true }).eq('id', leadId);
+  await sb.from('historico').insert({
+    lead_id: leadId,
+    vendedor_id: currentUser.id,
+    texto: `📦 Lead arquivado pelo gestor`
+  });
+
+  toast('Lead arquivado com sucesso', 'success');
+  await loadMyLeads();
+  if(currentUser._isManager) { loadDashboard(); loadAllLeads(); }
+}
+
+// ── Transferência de leads (gestor only) ──────────────────
+let transferLeadId = null;
+
+async function openTransfer(leadId, leadNome) {
+  if(!currentUser._isManager) return;
+  transferLeadId = leadId;
+  document.getElementById('transferLeadName').textContent = '📋 Lead: ' + leadNome;
+  
+  // Populate vendedor select (excluding current owner)
+  const lead = (allLeads||myLeads).find(l=>l.id===leadId);
+  const currentOwnerId = lead?.vendedor_id;
+  
+  const sel = document.getElementById('transferSelect');
+  sel.innerHTML = '<option value="">— Selecione o consultor —</option>';
+  
+  const vendedores = allVendedores || [];
+  vendedores
+    .filter(v => v.status === 'ativo' && v.id !== currentOwnerId)
+    .sort((a,b) => a.nome.localeCompare(b.nome))
+    .forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      opt.textContent = v.nome + ' · ' + (v.loja||'');
+      sel.appendChild(opt);
+    });
+  
+  document.getElementById('modalTransfer').classList.add('open');
+}
+
+function closeTransfer() {
+  transferLeadId = null;
+  document.getElementById('modalTransfer').classList.remove('open');
+}
+
+async function confirmTransfer() {
+  const novoVendedorId = document.getElementById('transferSelect').value;
+  if(!novoVendedorId) { toast('Selecione um consultor','error'); return; }
+  if(!transferLeadId) return;
+
+  const novoVendedor = (allVendedores||[]).find(v=>v.id===novoVendedorId);
+  const lead = (allLeads||myLeads).find(l=>l.id===transferLeadId);
+  const antigoVendedor = (allVendedores||[]).find(v=>v.id===lead?.vendedor_id);
+
+  // Update lead owner
+  await sb.from('leads').update({ vendedor_id: novoVendedorId }).eq('id', transferLeadId);
+  
+  // Register in historico
+  const texto = `🔄 Transferido de ${antigoVendedor?.nome||'?'} para ${novoVendedor?.nome||'?'} pelo gestor`;
+  await sb.from('historico').insert({
+    lead_id: transferLeadId,
+    vendedor_id: currentUser.id,
+    texto
+  });
+
+  toast(`Lead transferido para ${novoVendedor?.nome||'novo consultor'}`, 'success');
+  closeTransfer();
+  
+  // Reload
+  await loadMyLeads();
+  if(currentUser._isManager) { loadDashboard(); loadAllLeads(); }
+}
+
 async function deleteLead(){if(!editingLeadId||!confirm('Excluir este lead?'))return;await sb.from('leads').delete().eq('id',editingLeadId);toast('Lead excluído');closeLead();await loadMyLeads();}
 function renderHist(hist){document.getElementById('histList').innerHTML=hist.length?[...hist].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).map(h=>`<div class="hist-item"><div class="hist-time">${fmtDatetime(h.created_at)}</div>${esc(h.texto)}</div>`).join(''):'<div style="font-size:12px;color:var(--muted);">Nenhuma interação ainda.</div>';document.getElementById('histNew').value='';}
 async function addHist(){const txt=document.getElementById('histNew').value.trim();if(!txt||!editingLeadId)return;const{error}=await sb.from('historico').insert({lead_id:editingLeadId,vendedor_id:currentUser.id,texto:txt});if(error){toast('Erro','error');return;}toast('Nota salva!','success');document.getElementById('histNew').value='';const{data}=await sb.from('historico').select('*').eq('lead_id',editingLeadId).order('created_at',{ascending:false});renderHist(data||[]);}
