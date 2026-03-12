@@ -608,7 +608,7 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
         <div class="fgroup"><label>Canal de Entrada</label>
           <select id="fCanal"><option value="">Selecione…</option><option>WhatsApp</option><option>Instagram</option><option>Facebook</option><option>Presencial</option><option>Telefone</option><option>Site</option></select>
         </div>
-        <div class="fgroup"><label>Valor Estimado (R$)</label><input type="number" id="fValor" placeholder="Ex: 8500"/></div>
+        <div class="fgroup"><label>Valor da Venda (R$)</label><input type="text" id="fValor" placeholder="Ex: 8500 ou 8.500,00" inputmode="decimal"/></div>
       </div>
       <div class="form-row">
         <div class="fgroup"><label>Etapa</label>
@@ -1190,14 +1190,90 @@ function marcarFollowup(i){
 }
 function closeLead(){document.getElementById('leadOverlay').classList.remove('open');editingLeadId=null;}
 async function saveLead(){
-  const nome=document.getElementById('fNome').value.trim();if(!nome){toast('Informe o nome do cliente','error');return;}
-  document.getElementById('btnSave').textContent='Salvando…';document.getElementById('btnSave').disabled=true;
-  const _passValid=passageiros.filter(p=>p.nome.trim());const _pvExtra=window._pvExtraPayload||{};const payload={nome,telefone:document.getElementById('fTel').value,destino:document.getElementById('fDestino').value,periodo:document.getElementById('fData').value,canal:document.getElementById('fCanal').value,valor_estimado:parseFloat(document.getElementById('fValor').value)||null,etapa:document.getElementById('fEtapa').value,loja:document.getElementById('fLoja').value,notas:document.getElementById('fNotas').value,vendedor_id:currentUser.id,passageiros:_passValid,prazo:document.getElementById('fPrazo').value||null,followup_next:document.getElementById('fFollowup').value||null,followup_seq:window._fuSeq||[],..._pvExtra};
+  const nome=document.getElementById('fNome').value.trim();
+  if(!nome){toast('Informe o nome do cliente','error');return;}
+
+  document.getElementById('btnSave').textContent='Salvando…';
+  document.getElementById('btnSave').disabled=true;
+
+  // BUG FIX 1: valor — limpa pontos/vírgulas de formatação BR antes de parsear
+  // Ex: "8.500" → 8500 | "8.500,00" → 8500 | "8500" → 8500
+  const rawValor = document.getElementById('fValor').value.trim();
+  let valorFinal = null;
+  if(rawValor){
+    // Remove pontos de milhar, troca vírgula decimal por ponto
+    const normalizado = rawValor.replace(/\./g,'').replace(',','.');
+    const parsed = parseFloat(normalizado);
+    valorFinal = isNaN(parsed) ? null : parsed;
+  }
+
+  const _passValid = passageiros.filter(p=>p.nome.trim());
+  const _pvExtra = window._pvExtraPayload || {};
+
+  const payload = {
+    nome,
+    telefone: document.getElementById('fTel').value,
+    destino:  document.getElementById('fDestino').value,
+    periodo:  document.getElementById('fData').value,
+    canal:    document.getElementById('fCanal').value,
+    // BUG FIX 2: usa valorFinal normalizado, não parseFloat direto
+    valor_estimado: valorFinal,
+    etapa:    document.getElementById('fEtapa').value,
+    loja:     document.getElementById('fLoja').value,
+    notas:    document.getElementById('fNotas').value,
+    // BUG FIX 3: não sobrescreve vendedor_id em edição (gestor editando lead de outro vendedor)
+    // Só define vendedor_id em criação — em update mantém o dono original
+    passageiros:   _passValid,
+    prazo:         document.getElementById('fPrazo').value || null,
+    followup_next: document.getElementById('fFollowup').value || null,
+    followup_seq:  window._fuSeq || [],
+    ...(_pvExtra),
+  };
+
   let err;
-  if(editingLeadId){const old=myLeads.find(l=>l.id===editingLeadId);if(old&&old.etapa!==payload.etapa)await sb.from('historico').insert({lead_id:editingLeadId,vendedor_id:currentUser.id,texto:`Etapa: ${SL[old.etapa]} → ${SL[payload.etapa]}`});({error:err}=await sb.from('leads').update(payload).eq('id',editingLeadId));if(!err)toast('Lead atualizado!','success');}
-  else{const{data,error}=await sb.from('leads').insert(payload).select().single();err=error;if(!err){await sb.from('historico').insert({lead_id:data.id,vendedor_id:currentUser.id,texto:'Lead criado.'});toast('Lead adicionado!','success');}}
-  document.getElementById('btnSave').textContent='Salvar Lead';document.getElementById('btnSave').disabled=false;
-  if(err){toast('Erro: '+err.message,'error');return;}closeLead();await loadMyLeads();
+  if(editingLeadId){
+    // Em edição: não altera vendedor_id
+    const {valor_estimado: ve, ...payloadSemVendedor} = payload;
+    const payloadEdit = {...payloadSemVendedor, valor_estimado: valorFinal};
+    const old = myLeads.find(l=>l.id===editingLeadId)||allLeads?.find(l=>l.id===editingLeadId);
+    if(old && old.etapa!==payload.etapa){
+      await sb.from('historico').insert({
+        lead_id: editingLeadId,
+        vendedor_id: currentUser.id,
+        texto: `Etapa: ${SL[old.etapa]||old.etapa} → ${SL[payload.etapa]||payload.etapa}`
+      });
+    }
+    // BUG FIX 4: registra histórico de mudança de valor
+    if(old && old.valor_estimado !== valorFinal && valorFinal !== null){
+      await sb.from('historico').insert({
+        lead_id: editingLeadId,
+        vendedor_id: currentUser.id,
+        texto: `💰 Valor atualizado: R$ ${fmtNum(old.valor_estimado||0)} → R$ ${fmtNum(valorFinal)}`
+      });
+    }
+    ({error:err} = await sb.from('leads').update(payloadEdit).eq('id',editingLeadId));
+    if(!err) toast('Lead atualizado!','success');
+  } else {
+    // Em criação: define vendedor_id
+    const payloadCreate = {...payload, vendedor_id: currentUser.id};
+    const {data, error} = await sb.from('leads').insert(payloadCreate).select().single();
+    err = error;
+    if(!err){
+      await sb.from('historico').insert({
+        lead_id: data.id,
+        vendedor_id: currentUser.id,
+        texto: `Lead criado.${valorFinal ? ' Valor: R$ '+fmtNum(valorFinal) : ''}`
+      });
+      toast('Lead adicionado!','success');
+    }
+  }
+
+  document.getElementById('btnSave').textContent='Salvar Lead';
+  document.getElementById('btnSave').disabled=false;
+  if(err){toast('Erro ao salvar: '+err.message,'error');return;}
+  closeLead();
+  await loadMyLeads();
+  if(currentUser._isManager) loadDashboard();
 }
 // ── Arquivamento de leads (gestor only, somente Perdido) ──────
 async function archiveLead(leadId, leadNome) {
