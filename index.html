@@ -929,10 +929,10 @@ function renderLista(){
 function renderDashboard(){
   const leads=allLeads,hoje=new Date();hoje.setHours(0,0,0,0);
   const semana=new Date(hoje);semana.setDate(semana.getDate()-7);
-  const total=leads.length,vendas=leads.filter(l=>l.etapa==='venda').length,conv=total?Math.round(vendas/total*100):0;
+  const total=leads.length,vendas=leads.filter(isVendaOuPv).length,conv=total?Math.round(vendas/total*100):0;
   const novosHoje=leads.filter(l=>new Date(l.created_at)>=hoje).length,novosSem=leads.filter(l=>new Date(l.created_at)>=semana).length;
-  const urgentes=leads.filter(l=>daysSince(l.created_at)>=3&&l.etapa!=='venda').length;
-  const valorTotal=leads.filter(l=>l.etapa==='venda').reduce((a,l)=>a+(l.valor_estimado||0),0);
+  const urgentes=leads.filter(l=>daysSince(l.created_at)>=3&&!isVendaOuPv(l)&&l.etapa!=='perdido').length;
+  const valorTotal=leads.filter(isVendaOuPv).reduce((a,l)=>a+(l.valor_estimado||0),0);
   document.getElementById('dashKpis').innerHTML=`<div class="kpi-card"><div class="kpi-val">${total}</div><div class="kpi-label">Total Leads</div><div class="kpi-sub">${novosSem} novos esta semana</div></div><div class="kpi-card green"><div class="kpi-val">${vendas}</div><div class="kpi-label">Vendas</div><div class="kpi-sub">R$ ${fmtNum(valorTotal)}</div></div><div class="kpi-card"><div class="kpi-val">${conv}%</div><div class="kpi-label">Conversão</div></div><div class="kpi-card ${urgentes?'red':''}"><div class="kpi-val">${urgentes}</div><div class="kpi-label">Parados +3d</div><div class="kpi-sub">${novosHoje} novos hoje</div></div>`;
   const ativos=allVendedores.filter(v=>v.status==='ativo'||!v.status);
   const maxFn=Math.max(...STAGES.map(s=>leads.filter(l=>l.etapa===s).length),1);
@@ -1302,7 +1302,9 @@ async function loadArena() {
   try {
     const [r1, r2] = await Promise.all([
       sb.from('vendedores').select('*').eq('status','ativo').order('nome'),
+      // Busca todos os leads não arquivados, incluindo etapas pv_ (que foram vendas)
       sb.from('leads').select('id,vendedor_id,etapa,loja,canal,created_at,updated_at,valor_estimado')
+        .eq('arquivado', false)
     ]);
     arenaData.vendedores = r1.data || [];
     arenaData.leads = r2.data || [];
@@ -1313,11 +1315,16 @@ async function loadArena() {
   renderArena();
 }
 
+function isVendaOuPv(l) {
+  // Venda = etapa 'venda' OU qualquer etapa de pós-vendas (pv_*)
+  return l.etapa === 'venda' || (l.etapa && l.etapa.startsWith('pv_'));
+}
+
 function calcPontos(leads, meta) {
-  const vendas = leads.filter(l => l.etapa === 'venda').length;
+  const vendas = leads.filter(isVendaOuPv).length;
   const total = leads.length;
   const conv = total ? vendas / total : 0;
-  const valor = leads.filter(l => l.etapa === 'venda').reduce((a, l) => a + (l.valor_estimado || 0), 0);
+  const valor = leads.filter(isVendaOuPv).reduce((a, l) => a + (l.valor_estimado || 0), 0);
   // Scoring: vendas x40, leads x5, conv x20pts per %, valor x0.001
   return Math.round(vendas * 40 + total * 5 + conv * 2000 + valor * 0.001);
 }
@@ -1325,20 +1332,25 @@ function calcPontos(leads, meta) {
 function getMesLeads(leads) {
   const n = new Date();
   const ini = new Date(n.getFullYear(), n.getMonth(), 1);
-  return leads.filter(l => new Date(l.created_at) >= ini);
+  // Conta lead no mês se FOI CRIADO ou FOI ATUALIZADO (movido para venda) neste mês
+  return leads.filter(l => {
+    const criado = new Date(l.created_at) >= ini;
+    const atualizado = l.updated_at && new Date(l.updated_at) >= ini;
+    return criado || atualizado;
+  });
 }
 
 function calcBadges(v, vLeads, allVends, allLeads) {
   const badges = [];
   const ini = new Date(); ini.setDate(1); ini.setHours(0,0,0,0);
   const mesLeads = getMesLeads(vLeads);
-  const vendas = mesLeads.filter(l => l.etapa === 'venda').length;
+  const vendas = mesLeads.filter(isVendaOuPv).length;
   const meta = v.meta_mensal || 10;
 
   // 🥇 Campeão do mês
   const ranked = allVends.map(x => {
     const xl = getMesLeads(allLeads.filter(l => l.vendedor_id === x.id));
-    return { id: x.id, vendas: xl.filter(l => l.etapa === 'venda').length };
+    return { id: x.id, vendas: xl.filter(isVendaOuPv).length };
   }).sort((a, b) => b.vendas - a.vendas);
   if (ranked[0]?.id === v.id && vendas > 0) badges.push({ icon: '🥇', name: 'Campeão do Mês', desc: 'Mais vendas no mês' });
 
@@ -1350,10 +1362,10 @@ function calcBadges(v, vLeads, allVends, allLeads) {
   if (mesLeads.length === maxLeads && mesLeads.length > 0) badges.push({ icon: '🚀', name: 'Caçador de Leads', desc: `${mesLeads.length} leads no mês` });
 
   // 💎 Maior ticket médio
-  const vendidos = mesLeads.filter(l => l.etapa === 'venda' && l.valor_estimado);
+  const vendidos = mesLeads.filter(l => isVendaOuPv(l) && l.valor_estimado);
   const ticketMed = vendidos.length ? vendidos.reduce((a, l) => a + l.valor_estimado, 0) / vendidos.length : 0;
   const maxTicket = Math.max(...allVends.map(x => {
-    const xl = getMesLeads(allLeads.filter(l => l.vendedor_id === x.id)).filter(l => l.etapa === 'venda' && l.valor_estimado);
+    const xl = getMesLeads(allLeads.filter(l => l.vendedor_id === x.id)).filter(l => isVendaOuPv(l) && l.valor_estimado);
     return xl.length ? xl.reduce((a, l) => a + l.valor_estimado, 0) / xl.length : 0;
   }));
   if (ticketMed > 0 && ticketMed === maxTicket) badges.push({ icon: '💎', name: 'Maior Ticket', desc: 'R$ ' + fmtNum(ticketMed) + ' médio' });
@@ -1361,7 +1373,7 @@ function calcBadges(v, vLeads, allVends, allLeads) {
   // ⚡ Mais rápido (lead → venda com menor tempo médio)
   // Approximate by counting entries with valor
   const rapido = allVends.map(x => {
-    const xl = getMesLeads(allLeads.filter(l => l.vendedor_id === x.id && l.etapa === 'venda'));
+    const xl = getMesLeads(allLeads.filter(l => l.vendedor_id === x.id && isVendaOuPv(l)));
     return { id: x.id, cnt: xl.length };
   }).sort((a, b) => b.cnt - a.cnt);
   if (rapido[0]?.id === v.id && rapido[0].cnt > 0) badges.push({ icon: '⚡', name: 'Mais Veloz', desc: 'Fechamentos mais rápidos' });
@@ -1400,10 +1412,11 @@ function renderArenaVendedores() {
   const ranked = vendedores.map(v => {
     const vl = leads.filter(l => l.vendedor_id === v.id);
     const mesLeads = getMesLeads(vl);
-    const vendas = mesLeads.filter(l => l.etapa === 'venda').length;
+    // Conta venda + pv_* como fechamento
+    const vendas = mesLeads.filter(isVendaOuPv).length;
     const total = mesLeads.length;
     const conv = total ? Math.round(vendas / total * 100) : 0;
-    const valor = mesLeads.filter(l => l.etapa === 'venda').reduce((a, l) => a + (l.valor_estimado || 0), 0);
+    const valor = mesLeads.filter(isVendaOuPv).reduce((a, l) => a + (l.valor_estimado || 0), 0);
     const pts = calcPontos(mesLeads, v.meta_mensal || 10);
     const badges = calcBadges(v, vl, vendedores, leads);
     return { ...v, mesLeads: total, vendas, conv, valor, pts, badges };
@@ -1423,9 +1436,9 @@ function renderArenaLojas() {
       const v = vendedores.find(x => x.id === l.vendedor_id);
       return (l.loja || v?.loja) === lj;
     }));
-    const vendas = ljLeads.filter(l => l.etapa === 'venda').length;
+    const vendas = ljLeads.filter(isVendaOuPv).length;
     const conv = ljLeads.length ? Math.round(vendas / ljLeads.length * 100) : 0;
-    const valor = ljLeads.filter(l => l.etapa === 'venda').reduce((a, l) => a + (l.valor_estimado || 0), 0);
+    const valor = ljLeads.filter(isVendaOuPv).reduce((a, l) => a + (l.valor_estimado || 0), 0);
     const pts = Math.round(vendas * 40 + ljLeads.length * 5 + conv * 20 + valor * 0.001);
     return { nome: lj, loja: lj, mesLeads: ljLeads.length, vendas, conv, valor, pts, badges: [] };
   }).sort((a, b) => b.pts - a.pts);
