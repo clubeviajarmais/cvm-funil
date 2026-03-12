@@ -79,6 +79,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .card-archive-btn{display:none;position:absolute;top:6px;left:6px;background:#E5393520;color:var(--red);border:1.5px solid #f5b4b2;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;z-index:10;gap:4px;align-items:center;}
 .card-archive-btn:hover{background:var(--red);color:#fff;}
 .lead-card:hover .card-archive-btn{display:flex;}
+.passageiro-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+.passageiro-row input{flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;outline:none;}
+.passageiro-row input:focus{border-color:var(--teal);}
+.passageiro-row button{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0 4px;}
+.card-prazo{font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;margin-top:3px;display:inline-block;}
+.card-prazo.ok{background:#DCFCE7;color:#166534;}
+.card-prazo.soon{background:#FEF3C7;color:#92400E;}
+.card-prazo.late{background:#FEF2F2;color:#991B1B;}
+.followup-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:#fff;border:1px solid var(--border);margin-bottom:4px;font-size:12px;}
+.followup-item .fu-icon{font-size:14px;}
+.followup-item .fu-label{flex:1;font-weight:600;color:var(--navy);}
+.followup-item .fu-date{font-size:10px;color:var(--muted);}
+.followup-item.done{opacity:.5;text-decoration:line-through;}
+.card-group-badge{position:absolute;bottom:8px;right:8px;background:#EDE9FE;color:#6D28D9;border-radius:5px;padding:1px 5px;font-size:9px;font-weight:700;}
 .card-transfer-btn{display:none;position:absolute;top:6px;right:6px;background:var(--navy);color:#fff;border:none;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;z-index:10;gap:4px;align-items:center;}
 .card-transfer-btn:hover{background:var(--teal);}
 .lead-card:hover .card-transfer-btn{display:flex;}
@@ -502,13 +516,31 @@ select:focus,input[type=text]:focus{border-color:var(--teal);}
       </div>
       <div class="form-row">
         <div class="fgroup"><label>Etapa</label>
-          <select id="fEtapa"><option value="entrada">1. Entrada</option><option value="qualif">2. Qualificação</option><option value="oferta">3. Oferta</option><option value="negoc">4. Negociação</option><option value="venda">5. Venda Realizada</option><option value="perdido">Perdido ✗</option></select>
+          <select id="fEtapa" onchange="togglePrazoSec()" ><option value="entrada">1. Entrada</option><option value="qualif">2. Qualificação</option><option value="oferta">3. Oferta</option><option value="negoc">4. Negociação</option><option value="venda">5. Venda Realizada</option><option value="perdido">Perdido ✗</option></select>
         </div>
         <div class="fgroup"><label>Loja</label>
           <select id="fLoja"><option value="">—</option><option>Boa Vista</option><option>Shopping SL</option><option>Assaí Minas</option></select>
         </div>
       </div>
       <div class="fgroup"><label>Notas / Observações</label><textarea id="fNotas" placeholder="Interesse, orçamento, próximos passos…"></textarea></div>
+      <!-- PASSAGEIROS -->
+      <div id="passageirosSec" style="border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-top:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">👥 Passageiros do Grupo</div>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="addPassageiro()">+ Adicionar</button>
+        </div>
+        <div id="passageirosList"></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;">Marido e mulher, amigos viajando juntos? Cadastre todos aqui e feche em um único negócio.</div>
+      </div>
+      <!-- PRAZO / FOLLOW-UP -->
+      <div id="prazoSec" style="display:none;border:1.5px solid #FED7AA;border-radius:10px;padding:12px;margin-top:4px;background:#FFFBEB;">
+        <div style="font-size:11px;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">⏰ Prazo & Follow-up</div>
+        <div class="form-row">
+          <div class="fgroup"><label>Data limite de decisão</label><input type="date" id="fPrazo"/></div>
+          <div class="fgroup"><label>Próximo Follow-up</label><input type="date" id="fFollowup"/></div>
+        </div>
+        <div id="followupReminders" style="margin-top:8px;"></div>
+      </div>
       <div id="histSec" style="display:none;">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Histórico de Interações</div>
         <div class="hist-list" id="histList"></div>
@@ -703,7 +735,9 @@ function renderKanban(){
       const div=document.createElement('div');div.className='lead-card';div.draggable=true;div.dataset.id=l.id;
       const _tBtn = currentUser._isManager ? `<button class="card-transfer-btn" onclick="event.stopPropagation();openTransfer('${l.id}','${esc(l.nome)}')">🔄 Transferir</button>` : '';
       const _aBtn = (currentUser._isManager && l.etapa==='perdido') ? `<button class="card-archive-btn" onclick="event.stopPropagation();archiveLead('${l.id}','${esc(l.nome)}')">📦 Arquivar</button>` : '';
-      div.innerHTML=`${_tBtn}${_aBtn}<div class="lead-days ${alrt?'alert':''}">${days}d</div><div class="lead-name">${esc(l.nome)}</div>${l.destino?`<div class="lead-dest">✈ ${esc(l.destino)}${l.periodo?' · '+esc(l.periodo):''}</div>`:''}<div class="lead-tags">${l.loja?`<span class="tag tag-loja">${esc(l.loja)}</span>`:''} ${l.canal?`<span class="tag tag-canal">${esc(l.canal)}</span>`:''} ${l.valor_estimado?`<span class="tag" style="background:#FEF3C7;color:#92400E;">R$ ${fmtNum(l.valor_estimado)}</span>`:''}</div>${l.notas?`<div class="lead-preview">${esc(l.notas)}</div>`:''}`;
+      const _grp = l.passageiros&&l.passageiros.length ? `<span class="card-group-badge">👥 ${l.passageiros.length+1} pax</span>` : '';
+      const _prazoHtml = (()=>{ if(!l.prazo) return ''; const today=new Date();today.setHours(0,0,0,0);const pd=new Date(l.prazo+'T00:00:00');const diff=Math.round((pd-today)/(86400000));if(diff<0)return `<span class="card-prazo late">⚠ Prazo vencido</span>`;if(diff<=3)return `<span class="card-prazo soon">⏰ ${diff}d p/ fechar</span>`;return `<span class="card-prazo ok">📅 ${diff}d p/ fechar</span>`; })();
+      div.innerHTML=`${_tBtn}${_aBtn}${_grp}<div class="lead-days ${alrt?'alert':''}">${days}d</div><div class="lead-name">${esc(l.nome)}</div>${l.destino?`<div class="lead-dest">✈ ${esc(l.destino)}${l.periodo?' · '+esc(l.periodo):''}</div>`:''}<div class="lead-tags">${l.loja?`<span class="tag tag-loja">${esc(l.loja)}</span>`:''} ${l.canal?`<span class="tag tag-canal">${esc(l.canal)}</span>`:''} ${l.valor_estimado?`<span class="tag" style="background:#FEF3C7;color:#92400E;">R$ ${fmtNum(l.valor_estimado)}</span>`:''}</div>${_prazoHtml}${l.notas?`<div class="lead-preview">${esc(l.notas)}</div>`:''}`;
       div.addEventListener('click',()=>openLead(l.id));
       div.addEventListener('dragstart',()=>{dragId=l.id;div.classList.add('dragging');});
       div.addEventListener('dragend',()=>div.classList.remove('dragging'));
@@ -726,13 +760,16 @@ function renderMyKpis(){
   const ini=new Date();ini.setDate(1);ini.setHours(0,0,0,0);
   const mesLeads=myLeads.filter(l=>new Date(l.created_at)>=ini);
   const total=myLeads.length;
-  const vendas=mesLeads.filter(l=>l.etapa==='venda').length;
-  const conv=mesLeads.length?Math.round(vendas/mesLeads.length*100):0;
+  // FIX: contar TODAS as vendas do funil, não só as criadas este mês
+  // Vendedor pode ter criado o lead mês passado e fechado agora
+  const vendasTodas=myLeads.filter(l=>l.etapa==='venda');
+  const vendas=vendasTodas.length;
+  const conv=total>0?Math.round(vendas/total*100):0;
   const metaVendas=currentUser.meta_mensal||10;
   const metaValor=currentUser.meta_valor||0;
 
-  // Valor realizado (vendas do mês)
-  const valRealizado=mesLeads.filter(l=>l.etapa==='venda').reduce((a,l)=>a+(l.valor_estimado||0),0);
+  // Valor realizado: soma de TODOS os leads em venda (não só do mês)
+  const valRealizado=vendasTodas.reduce((a,l)=>a+(l.valor_estimado||0),0);
   // Pipeline ativo (todos exceto venda e perdido)
   const valPipeline=myLeads.filter(l=>l.etapa!=='venda'&&l.etapa!=='perdido').reduce((a,l)=>a+(l.valor_estimado||0),0);
   // Parados +3d (exceto venda e perdido)
@@ -972,15 +1009,90 @@ async function openLead(id=null,readOnly=false){
     document.getElementById('fCanal').value=l.canal||'';document.getElementById('fValor').value=l.valor_estimado||'';
     document.getElementById('fEtapa').value=l.etapa||'entrada';document.getElementById('fLoja').value=l.loja||'';
     document.getElementById('fNotas').value=l.notas||'';renderHist(l.historico||[]);
+    // Passageiros
+    renderPassageiros(l.passageiros||[]);
+    // Prazo e follow-up
+    document.getElementById('fPrazo').value=l.prazo||'';
+    document.getElementById('fFollowup').value=l.followup_next||'';
+    renderFollowupReminders(l.followup_seq||[]);
+    togglePrazoSec();
   }
   document.getElementById('leadOverlay').classList.add('open');
 }
-function clearForm(){['fNome','fTel','fDestino','fData','fValor','fNotas'].forEach(id=>document.getElementById(id).value='');document.getElementById('fCanal').value='';document.getElementById('fEtapa').value='entrada';document.getElementById('fLoja').value='';document.getElementById('histList').innerHTML='';}
+
+function clearForm(){
+  ['fNome','fTel','fDestino','fData','fValor','fNotas','fPrazo','fFollowup'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fCanal').value='';document.getElementById('fEtapa').value='entrada';document.getElementById('fLoja').value='';
+  document.getElementById('histList').innerHTML='';document.getElementById('passageirosList').innerHTML='';
+  document.getElementById('followupReminders').innerHTML='';
+  document.getElementById('prazoSec').style.display='none';
+}
+
+function togglePrazoSec(){
+  const etapa=document.getElementById('fEtapa').value;
+  document.getElementById('prazoSec').style.display=(etapa==='negoc'||etapa==='oferta')?'block':'none';
+  if(etapa==='negoc'||etapa==='oferta') renderFollowupReminders();
+}
+
+// ── PASSAGEIROS ────────────────────────────────────────────
+let passageiros=[];
+function renderPassageiros(list){
+  passageiros=list||[];
+  const el=document.getElementById('passageirosList');
+  el.innerHTML=passageiros.map((p,i)=>`
+    <div class="passageiro-row">
+      <input type="text" value="${esc(p.nome)}" placeholder="Nome do passageiro" onchange="passageiros[${i}].nome=this.value"/>
+      <input type="text" value="${esc(p.tel||'')}" placeholder="Telefone (opcional)" style="max-width:150px;" onchange="passageiros[${i}].tel=this.value"/>
+      <button onclick="removePassageiro(${i})">✕</button>
+    </div>`).join('');
+}
+function addPassageiro(){
+  passageiros.push({nome:'',tel:''});
+  renderPassageiros(passageiros);
+  document.querySelector('#passageirosList .passageiro-row:last-child input').focus();
+}
+function removePassageiro(i){passageiros.splice(i,1);renderPassageiros(passageiros);}
+
+// ── FOLLOW-UP SEQUÊNCIA ────────────────────────────────────
+function renderFollowupReminders(seq){
+  if(seq!==undefined) window._fuSeq=seq||[];
+  const s=window._fuSeq||[];
+  const el=document.getElementById('followupReminders');
+  if(!s.length){
+    el.innerHTML=`<button class="btn btn-ghost btn-sm" type="button" onclick="gerarFollowups()" style="font-size:11px;">🔔 Gerar lembretes automáticos (1, 3, 7 dias)</button>`;
+    return;
+  }
+  el.innerHTML=s.map((f,i)=>`
+    <div class="followup-item ${f.done?'done':''}">
+      <span class="fu-icon">${f.done?'✅':'🔔'}</span>
+      <span class="fu-label">${f.label}</span>
+      <span class="fu-date">${f.date}</span>
+      ${!f.done?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 6px;" onclick="marcarFollowup(${i})">Feito</button>`:''}
+    </div>`).join('')+
+    `<button class="btn btn-ghost btn-sm" type="button" onclick="gerarFollowups()" style="font-size:10px;margin-top:4px;">↺ Regenerar</button>`;
+}
+function gerarFollowups(){
+  const hoje=new Date();
+  const fmtDate=d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+  const add=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+  window._fuSeq=[
+    {label:'1º Follow-up — Verificar interesse',date:fmtDate(add(hoje,1)),done:false},
+    {label:'2º Follow-up — Enviar cotação atualizada',date:fmtDate(add(hoje,3)),done:false},
+    {label:'3º Follow-up — Reforçar condições especiais',date:fmtDate(add(hoje,5)),done:false},
+    {label:'4º Follow-up — Urgência / disponibilidade',date:fmtDate(add(hoje,7)),done:false},
+    {label:'5º Follow-up — Decisão final',date:fmtDate(add(hoje,10)),done:false},
+  ];
+  renderFollowupReminders(window._fuSeq);
+}
+function marcarFollowup(i){
+  if(window._fuSeq&&window._fuSeq[i]) window._fuSeq[i].done=true;
+  renderFollowupReminders(window._fuSeq);
+}
 function closeLead(){document.getElementById('leadOverlay').classList.remove('open');editingLeadId=null;}
 async function saveLead(){
   const nome=document.getElementById('fNome').value.trim();if(!nome){toast('Informe o nome do cliente','error');return;}
   document.getElementById('btnSave').textContent='Salvando…';document.getElementById('btnSave').disabled=true;
-  const payload={nome,telefone:document.getElementById('fTel').value,destino:document.getElementById('fDestino').value,periodo:document.getElementById('fData').value,canal:document.getElementById('fCanal').value,valor_estimado:parseFloat(document.getElementById('fValor').value)||null,etapa:document.getElementById('fEtapa').value,loja:document.getElementById('fLoja').value,notas:document.getElementById('fNotas').value,vendedor_id:currentUser.id};
+  const _passValid=passageiros.filter(p=>p.nome.trim());const payload={nome,telefone:document.getElementById('fTel').value,destino:document.getElementById('fDestino').value,periodo:document.getElementById('fData').value,canal:document.getElementById('fCanal').value,valor_estimado:parseFloat(document.getElementById('fValor').value)||null,etapa:document.getElementById('fEtapa').value,loja:document.getElementById('fLoja').value,notas:document.getElementById('fNotas').value,vendedor_id:currentUser.id,passageiros:_passValid,prazo:document.getElementById('fPrazo').value||null,followup_next:document.getElementById('fFollowup').value||null,followup_seq:window._fuSeq||[]};
   let err;
   if(editingLeadId){const old=myLeads.find(l=>l.id===editingLeadId);if(old&&old.etapa!==payload.etapa)await sb.from('historico').insert({lead_id:editingLeadId,vendedor_id:currentUser.id,texto:`Etapa: ${SL[old.etapa]} → ${SL[payload.etapa]}`});({error:err}=await sb.from('leads').update(payload).eq('id',editingLeadId));if(!err)toast('Lead atualizado!','success');}
   else{const{data,error}=await sb.from('leads').insert(payload).select().single();err=error;if(!err){await sb.from('historico').insert({lead_id:data.id,vendedor_id:currentUser.id,texto:'Lead criado.'});toast('Lead adicionado!','success');}}
