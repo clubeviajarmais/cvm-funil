@@ -1208,6 +1208,17 @@ async function saveLead(){
   }
 
   const _passValid = passageiros.filter(p=>p.nome.trim());
+  // Coleta campos PV inline se a seção estiver aberta
+  if(document.getElementById('pvInlineSection')){
+    const pvNotas = document.getElementById('pvNotas')?.value||'';
+    window._pvExtraPayload = {
+      pv_notas: pvNotas,
+      pv_checklist: window._pvChecklist||[],
+    };
+    if(window._pvEtapa) document.getElementById('fEtapa').value = window._pvEtapa;
+  } else {
+    window._pvExtraPayload = null;
+  }
   const _pvExtra = window._pvExtraPayload || {};
 
   const payload = {
@@ -1886,25 +1897,7 @@ function togglePvCheck(i, cb){
   cb.closest('.pv-check-item').classList.toggle('checked', cb.checked);
 }
 
-// Hook saveLead to also save PV fields
-const _origSaveLead = saveLead;
-async function saveLead(){
-  // Inject PV fields into payload if section exists
-  if(document.getElementById('pvInlineSection')){
-    const pvNotas = document.getElementById('pvNotas')?.value||'';
-    window._pvExtraPayload = {
-      pv_notas: pvNotas,
-      pv_checklist: window._pvChecklist||[],
-    };
-    if(window._pvEtapa) document.getElementById('fEtapa').value = window._pvEtapa;
-  } else {
-    window._pvExtraPayload = null;
-  }
-  await _origSaveLead();
-}
-
-// Monkey-patch the actual save to include pv fields
-const __realSave = window.saveLead;
+// PV fields handled directly inside saveLead()
 
 </script>
 </body>
