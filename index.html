@@ -10,6 +10,8 @@
 :root{--navy:#0F1F45;--navy2:#1A2E5E;--teal:#028090;--mint:#02C39A;--red:#E53935;--orange:#F4A261;--yellow:#F9C74F;--bg:#EEF1F8;--surface:#FFFFFF;--border:#DDE4F0;--text:#0F1F45;--muted:#6B7FA8;--sh:0 2px 10px rgba(15,31,69,.10);--sh-lg:0 8px 28px rgba(15,31,69,.14);}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── LOGIN ── */
 #configScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,#1e3a8a 100%);padding:24px;}
 .config-box{background:#fff;border-radius:20px;padding:40px;width:520px;max-width:100%;box-shadow:0 24px 60px rgba(0,0,0,.25);}
 .config-logo{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
@@ -20,54 +22,220 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .config-box input,.config-box select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:#fff;outline:none;margin-bottom:10px;transition:border-color .15s;}
 .config-box input:focus,.config-box select:focus{border-color:var(--teal);}
 .config-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-/* ===== LAYOUT ===== */
-#app{display:none;flex-direction:column;min-height:100vh;}
-.topbar{height:54px;background:var(--navy);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.2);}
-.topbar-left{display:flex;align-items:center;gap:10px;}
+
+/* ── APP LAYOUT ── */
+#app{display:none;min-height:100vh;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{height:54px;background:var(--navy);display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 0;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.2);flex-shrink:0;}
+.topbar-left{display:flex;align-items:center;gap:10px;height:100%;}
+.topbar-hamburger{width:54px;height:54px;display:none;align-items:center;justify-content:center;cursor:pointer;color:#7ea8cc;flex-shrink:0;border:none;background:none;}
+.topbar-hamburger:hover{color:#fff;}
 .topbar-dot{width:9px;height:9px;border-radius:50%;background:var(--mint);}
 .topbar-brand{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;letter-spacing:.3px;}
 .topbar-sub{font-size:10px;color:#7ea8cc;margin-top:1px;}
 .topbar-right{display:flex;align-items:center;gap:8px;}
-.user-pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.1);border-radius:20px;padding:5px 12px 5px 8px;font-size:12px;color:#fff;font-weight:600;cursor:pointer;}
-.user-pill:hover{background:rgba(255,255,255,.15);}
+.user-pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.1);border-radius:20px;padding:5px 12px 5px 8px;font-size:12px;color:#fff;font-weight:600;cursor:pointer;transition:background .15s;}
+.user-pill:hover{background:rgba(255,255,255,.16);}
 .user-avatar{width:26px;height:26px;border-radius:50%;background:var(--mint);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;font-family:'Syne',sans-serif;}
-/* APP BODY */
+
+/* BODY = SIDEBAR + CONTENT */
 .app-body{display:flex;flex:1;min-height:calc(100vh - 54px);}
+
 /* SIDEBAR */
-.sidebar{width:220px;min-width:220px;background:var(--navy);display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.07);transition:width .2s ease,min-width .2s ease;overflow:hidden;}
-.sidebar.collapsed{width:60px;min-width:60px;}
-.sidebar-toggle{display:flex;align-items:center;justify-content:center;height:44px;cursor:pointer;color:#4a6380;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;transition:color .15s;}
-.sidebar-toggle:hover{color:#fff;}
-.sidebar-nav{flex:1;padding:8px 0;overflow-y:auto;overflow-x:hidden;}
+.sidebar{width:224px;min-width:224px;background:var(--navy);display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.07);transition:width .22s ease,min-width .22s ease;overflow:hidden;flex-shrink:0;}
+.sidebar.collapsed{width:56px;min-width:56px;}
+.sidebar-toggle{display:flex;align-items:center;justify-content:center;height:44px;cursor:pointer;color:#4a6380;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;transition:color .15s;border:none;background:none;width:100%;}
+.sidebar-toggle:hover{color:#fff;background:rgba(255,255,255,.04);}
+.sidebar-nav{flex:1;padding:6px 0;overflow-y:auto;overflow-x:hidden;}
 .sidebar-nav::-webkit-scrollbar{width:0;}
-.sidebar-section{font-size:9px;font-weight:800;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:1.2px;padding:14px 18px 5px;white-space:nowrap;}
-.sidebar.collapsed .sidebar-section{opacity:0;height:0;padding:0;overflow:hidden;}
-.nav-item{display:flex;align-items:center;gap:12px;padding:9px 18px;cursor:pointer;color:#7ea8cc;border-left:3px solid transparent;white-space:nowrap;transition:all .15s;position:relative;}
+.sidebar-section{font-size:9px;font-weight:800;color:rgba(255,255,255,.22);text-transform:uppercase;letter-spacing:1.2px;padding:14px 16px 5px;white-space:nowrap;overflow:hidden;}
+.sidebar.collapsed .sidebar-section{opacity:0;height:12px;padding:0;overflow:hidden;}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 16px;cursor:pointer;color:#7ea8cc;border-left:3px solid transparent;white-space:nowrap;transition:all .15s;user-select:none;}
 .nav-item:hover{color:#fff;background:rgba(255,255,255,.05);}
 .nav-item.active{color:var(--mint);background:rgba(2,195,154,.07);border-left-color:var(--mint);}
 .nav-icon{width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-.nav-label{font-size:13px;font-weight:600;white-space:nowrap;}
-.sidebar.collapsed .nav-label{display:none;}
-.sidebar.collapsed .nav-item{justify-content:center;padding:11px;}
-.sidebar.collapsed .nav-item:hover::after{content:attr(data-label);position:fixed;left:68px;background:var(--navy2);color:#fff;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap;z-index:999;box-shadow:0 4px 14px rgba(0,0,0,.35);pointer-events:none;}
+.nav-label{font-size:13px;font-weight:600;white-space:nowrap;transition:opacity .15s;}
+.sidebar.collapsed .nav-label{opacity:0;pointer-events:none;}
+.sidebar.collapsed .nav-item{justify-content:center;padding:11px 0;}
+.sidebar.collapsed .sidebar-toggle svg{transform:scaleX(-1);}
+/* Tooltip no collapsed */
+.sidebar.collapsed .nav-item{position:relative;}
+.sidebar.collapsed .nav-item:hover::after{content:attr(data-label);position:fixed;left:64px;background:#1A2E5E;color:#fff;padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.4);pointer-events:none;}
 .manager-only{display:none;}
 .manager-only.show{display:flex;}
-/* CONTENT */
-.app-content{flex:1;min-width:0;background:var(--bg);}
-.view{display:none;padding:24px;}
-.view.active{display:block;animation:fadeIn .15s ease;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
-/* Mobile */
-@media(max-width:900px){
-  .kanban{grid-template-columns:repeat(2,1fr);}
-  .dash-grid{grid-template-columns:1fr;}
-  .sidebar{position:fixed;left:-220px;top:54px;height:calc(100vh - 54px);z-index:300;transition:left .2s ease;min-width:220px;}
-  .sidebar.mobile-open{left:0;}
-  .sidebar.collapsed{left:-60px;width:60px;min-width:60px;}
-  .sidebar-overlay{display:none;position:fixed;inset:0;top:54px;background:rgba(0,0,0,.4);z-index:299;}
-  .sidebar-overlay.show{display:block;}
+
+/* CONTENT AREA */
+.app-content{flex:1;min-width:0;background:var(--bg);overflow-x:hidden;}
+.view{display:none;padding:22px 24px;}
+.view.active{display:block;animation:vfade .15s ease;}
+@keyframes vfade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+
+/* Mobile overlay */
+.sidebar-overlay{display:none;position:fixed;inset:0;top:54px;background:rgba(0,0,0,.45);z-index:299;}
+.sidebar-overlay.show{display:block;}
+@media(max-width:860px){
+  .topbar-hamburger{display:flex;}
+  .sidebar{position:fixed;left:0;top:54px;height:calc(100vh - 54px);z-index:300;transform:translateX(-100%);transition:transform .22s ease;}
+  .sidebar.mobile-open{transform:translateX(0);}
+  .sidebar.collapsed{transform:translateX(-100%);}
 }
-/* ARENA */
+
+/* ── BOTOES ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:9px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all .15s;}
+.btn-primary{background:var(--teal);color:#fff;}
+.btn-primary:hover{background:#016f7e;}
+.btn-danger{background:#fdecea;color:var(--red);border:1.5px solid #f5b4b2;}
+.btn-success{background:#e8fff9;color:#018a6b;border:1.5px solid #a8e6d4;}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--teal);color:var(--teal);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+
+/* ── KPIs ── */
+.kpi-strip{display:grid;gap:12px;margin-bottom:18px;}
+.kpi-card{background:var(--surface);border-radius:13px;padding:16px 18px;box-shadow:var(--sh);border-top:3px solid var(--teal);position:relative;transition:transform .15s,box-shadow .15s;}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--sh-lg);}
+.kpi-card.red{border-top-color:var(--red);}
+.kpi-card.orange{border-top-color:var(--orange);}
+.kpi-card.green{border-top-color:var(--mint);}
+.kpi-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--navy);line-height:1;}
+.kpi-card.red .kpi-val{color:var(--red);}
+.kpi-card.orange .kpi-val{color:#d4782a;}
+.kpi-card.green .kpi-val{color:#018a6b;}
+.kpi-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:5px;}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ── KANBAN ── */
+.kanban{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:start;}
+.col{background:var(--surface);border-radius:13px;box-shadow:var(--sh);overflow:hidden;}
+.col-hd{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.col-hd-title{font-size:11px;font-weight:800;font-family:'Syne',sans-serif;text-transform:uppercase;letter-spacing:.6px;}
+.col-cnt{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(0,0,0,.06);}
+.c-entrada .col-hd{background:#0F1F4508;}.c-entrada .col-hd-title{color:var(--navy2);}
+.c-qualif .col-hd{background:#02809010;}.c-qualif .col-hd-title{color:var(--teal);}
+.c-oferta .col-hd{background:#1C729310;}.c-oferta .col-hd-title{color:#1C7293;}
+.c-negoc .col-hd{background:#F4A26115;}.c-negoc .col-hd-title{color:#b8722a;}
+.c-venda .col-hd{background:#02C39A15;}.c-venda .col-hd-title{color:#018a6b;}
+.c-perdido .col-hd{background:#E5393515;}.c-perdido .col-hd-title{color:#E53935;}
+.col-body{padding:10px;min-height:100px;}
+.col-body.drag-over{background:#e4fff7;border-radius:8px;}
+.lead-card{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all .15s;position:relative;animation:cardIn .18s ease;}
+@keyframes cardIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+.lead-card:hover{box-shadow:var(--sh-lg);border-color:var(--teal);transform:translateY(-1px);}
+.card-archive-btn{display:none;position:absolute;top:6px;left:6px;background:#E5393520;color:var(--red);border:1.5px solid #f5b4b2;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;z-index:10;gap:4px;align-items:center;}
+.card-archive-btn:hover{background:var(--red);color:#fff;}
+.lead-card:hover .card-archive-btn{display:flex;}
+.passageiro-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+.passageiro-row input{flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;outline:none;}
+.passageiro-row input:focus{border-color:var(--teal);}
+.passageiro-row button{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0 4px;}
+.card-prazo{font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;margin-top:3px;display:inline-block;}
+.card-prazo.ok{background:#DCFCE7;color:#166534;}
+.card-prazo.soon{background:#FEF3C7;color:#92400E;}
+.card-prazo.late{background:#FEF2F2;color:#991B1B;}
+.followup-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:#fff;border:1px solid var(--border);margin-bottom:4px;font-size:12px;}
+.followup-item .fu-label{flex:1;font-weight:600;color:var(--navy);}
+.followup-item .fu-date{font-size:10px;color:var(--muted);}
+.followup-item.done{opacity:.5;text-decoration:line-through;}
+.card-group-badge{position:absolute;bottom:8px;right:8px;background:#EDE9FE;color:#6D28D9;border-radius:5px;padding:1px 5px;font-size:9px;font-weight:700;}
+.card-transfer-btn{display:none;position:absolute;top:6px;right:6px;background:var(--navy);color:#fff;border:none;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;z-index:10;gap:4px;align-items:center;}
+.card-transfer-btn:hover{background:var(--teal);}
+.lead-card:hover .card-transfer-btn{display:flex;}
+.lead-card.dragging{opacity:.45;transform:rotate(1deg);}
+.lead-name{font-size:13px;font-weight:700;color:var(--navy);padding-right:32px;}
+.lead-dest{font-size:11px;color:var(--teal);font-weight:600;margin-top:2px;}
+.lead-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;}
+.tag-loja{background:#EDF2FE;color:var(--navy2);}
+.tag-canal{background:#F3F4F6;color:var(--muted);}
+.lead-days{position:absolute;top:10px;right:10px;font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);}
+.lead-days.alert{color:var(--red);font-weight:700;}
+.lead-preview{font-size:10px;color:var(--muted);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.empty-col{text-align:center;padding:28px 10px;color:var(--muted);font-size:12px;opacity:.7;}
+
+/* ── FILTRO BAR ── */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--surface);border-radius:12px;padding:12px 16px;margin-bottom:16px;box-shadow:var(--sh);}
+.filter-bar label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+select,input[type=text]{font-family:'DM Sans',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;background:#fff;color:var(--text);outline:none;transition:border-color .15s;}
+select:focus,input[type=text]:focus{border-color:var(--teal);}
+
+/* ── MODAIS ── */
+.overlay{position:fixed;inset:0;background:rgba(10,20,50,.45);backdrop-filter:blur(4px);z-index:400;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.modal{background:#fff;border-radius:18px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);transform:translateY(14px);transition:transform .2s;}
+.overlay.open .modal{transform:translateY(0);}
+.modal-hd{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1;border-radius:18px 18px 0 0;}
+.modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--navy);}
+.modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);line-height:1;padding:0 4px;}
+.modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:14px;}
+.modal-ft{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;align-items:center;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fgroup{display:flex;flex-direction:column;gap:5px;}
+.fgroup label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.fgroup input,.fgroup select,.fgroup textarea{font-family:'DM Sans',sans-serif;font-size:13px;border:1.5px solid var(--border);border-radius:9px;padding:9px 12px;background:#fff;color:var(--text);outline:none;width:100%;transition:border-color .15s;}
+.fgroup textarea{min-height:72px;resize:vertical;}
+.fgroup input:focus,.fgroup select:focus,.fgroup textarea:focus{border-color:var(--teal);}
+
+/* ── HISTORICO ── */
+.hist-list{display:flex;flex-direction:column;gap:7px;max-height:180px;overflow-y:auto;}
+.hist-item{background:var(--bg);border-radius:8px;padding:9px 12px;font-size:12px;border-left:3px solid var(--teal);}
+.hist-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:3px;}
+.hist-add{display:flex;gap:8px;margin-top:10px;}
+.hist-add textarea{flex:1;min-height:42px;}
+
+/* ── DASHBOARD ── */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
+.dash-card{background:var(--surface);border-radius:14px;padding:20px;box-shadow:var(--sh);}
+.dash-card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.rank-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.rank-row:last-child{border-bottom:none;}
+.rank-num{font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--muted);width:18px;text-align:center;}
+.rank-name{flex:1;font-size:13px;font-weight:600;color:var(--navy);}
+.rank-bar-wrap{width:120px;background:var(--bg);border-radius:20px;height:7px;overflow:hidden;}
+.rank-bar{height:100%;border-radius:20px;background:var(--teal);transition:width .6s ease;}
+.rank-cnt{font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--navy);width:28px;text-align:right;}
+.rank-conv{font-size:10px;color:var(--muted);width:36px;text-align:right;}
+.fn-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.fn-label{width:110px;font-size:11px;font-weight:600;color:var(--muted);text-align:right;}
+.fn-track{flex:1;background:var(--bg);border-radius:8px;height:30px;overflow:hidden;}
+.fn-bar{height:100%;display:flex;align-items:center;padding:0 10px;transition:width .6s ease;}
+.fn-bar span{font-size:12px;font-weight:700;color:#fff;white-space:nowrap;}
+.fn-pct{font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:var(--muted);width:38px;}
+.alert-row{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:#FFF5F5;border-radius:9px;margin-bottom:8px;border-left:3px solid var(--red);}
+.al-name{font-size:12px;font-weight:700;color:var(--navy);}
+.al-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.al-days{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--red);white-space:nowrap;}
+.meta-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.meta-row:last-child{border-bottom:none;}
+.meta-name{flex:1;font-size:13px;font-weight:600;color:var(--navy);}
+.meta-prog-wrap{width:100px;background:var(--bg);border-radius:20px;height:8px;overflow:hidden;}
+.meta-prog{height:100%;border-radius:20px;transition:width .6s ease;}
+.meta-nums{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);white-space:nowrap;}
+.loja-table{width:100%;border-collapse:collapse;font-size:13px;}
+.loja-table th{text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;border-bottom:2px solid var(--border);}
+.loja-table td{padding:8px;border-bottom:1px solid var(--border);}
+.all-table{width:100%;border-collapse:collapse;font-size:12px;}
+.all-table th{text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:9px 10px;background:var(--bg);border-bottom:2px solid var(--border);position:sticky;top:0;}
+.all-table td{padding:9px 10px;border-bottom:1px solid var(--border);}
+.all-table tr:hover td{background:#F5F8FF;cursor:pointer;}
+.all-table tr.urgent td{background:#FFF5F5;}
+.pill-stage{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
+.badge-ativo{background:#e8fff9;color:#018a6b;}
+.badge-pendente{background:#FFF8E1;color:#7D5A00;}
+.badge-bloqueado{background:#fdecea;color:var(--red);}
+.badge-gestor{background:#EDF2FE;color:var(--navy2);}
+.badge-vendedor{background:#F3F4F6;color:var(--muted);}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:13px 22px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--sh-lg);z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.success{background:#018a6b;}
+.toast.error{background:var(--red);}
+.spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-thumb{background:#C4CFDF;border-radius:4px;}
+
+/* ── ARENA ── */
 .arena-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
 .arena-title-wrap{display:flex;align-items:center;gap:14px;}
 .arena-crown{font-size:38px;line-height:1;}
@@ -92,7 +260,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .podium-avatar.p1{background:linear-gradient(135deg,#FFD700,#FFA500);color:#7D5A00;box-shadow:0 4px 20px rgba(255,215,0,.5);width:72px;height:72px;font-size:26px;}
 .podium-avatar.p2{background:linear-gradient(135deg,#C0C0C0,#A0A0A0);color:#444;}
 .podium-avatar.p3{background:linear-gradient(135deg,#CD7F32,#A0522D);color:#fff;}
-.podium-crown{position:absolute;top:-14px;font-size:18px;}
 .podium-name{font-size:12px;font-weight:700;color:var(--navy);text-align:center;max-width:90px;}
 .podium-loja{font-size:10px;color:var(--muted);text-align:center;}
 .podium-pts{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--teal);}
@@ -117,16 +284,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .arena-bar-wrap{display:flex;align-items:center;gap:8px;}
 .arena-bar-track{flex:1;max-width:80px;background:var(--bg);border-radius:20px;height:6px;overflow:hidden;}
 .arena-bar-fill{height:100%;border-radius:20px;background:var(--teal);transition:width .8s ease;}
-.badge-pill{display:inline-block;font-size:11px;padding:2px 6px;border-radius:6px;margin:1px;background:#EDF2FE;cursor:default;}
+.badge-pill{display:inline-flex;align-items:center;font-size:11px;padding:2px 7px;border-radius:6px;margin:1px;background:#EDF2FE;}
 .badges-wall{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px;}
 .badge-card{background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh);display:flex;gap:12px;align-items:center;transition:transform .15s;}
 .badge-card:hover{transform:translateY(-2px);box-shadow:var(--sh-lg);}
-.badge-icon{font-size:28px;line-height:1;flex-shrink:0;}
+.badge-icon{width:40px;height:40px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .badge-info-name{font-size:13px;font-weight:700;color:var(--navy);}
 .badge-info-who{font-size:11px;color:var(--teal);font-weight:600;margin-top:2px;}
 .badge-info-desc{font-size:10px;color:var(--muted);margin-top:2px;}
 .badge-card.empty{opacity:.4;filter:grayscale(1);}
-/* POS VENDAS */
+
+/* ── POS VENDAS ── */
 .pv-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
 .pv-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--navy);}
 .pv-sub{font-size:12px;color:var(--muted);margin-top:2px;}
@@ -176,37 +344,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .pv-check-item input[type=checkbox]{accent-color:var(--teal);width:14px;height:14px;}
 .pv-check-item.checked{background:#F0FDF4;border-color:#86EFAC;color:#166534;font-weight:600;}
 
-/* ===== VISUAL POLISH ===== */
-/* Better KPI cards */
-.kpi-card{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,31,69,.06),0 4px 16px rgba(15,31,69,.08);border:1px solid var(--border);border-top:3px solid var(--teal);transition:transform .15s,box-shadow .15s;}
-.kpi-card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(15,31,69,.12);}
-/* Better dash cards */
-.dash-card{background:var(--surface);border-radius:16px;padding:22px;box-shadow:0 1px 3px rgba(15,31,69,.06),0 4px 16px rgba(15,31,69,.08);border:1px solid var(--border);}
-/* Better filter bar */
-.filter-bar{background:var(--surface);border-radius:12px;padding:12px 16px;margin-bottom:20px;box-shadow:0 1px 3px rgba(15,31,69,.06);border:1px solid var(--border);gap:12px;}
-/* Better tables */
-.all-table tr:hover td{background:rgba(2,128,144,.04);}
-/* Better modals */
-.modal{border-radius:20px;}
-/* View padding */
-.view{padding:24px 28px;}
-@media(max-width:1100px){.view{padding:16px;}}
-/* Arena cards better */
-.arena-kpi{border-radius:14px;}
-.badge-card{border-radius:16px;padding:18px 20px;}
-.badge-icon{background:var(--bg);}
-/* Page header style for each view */
-.view-header{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);}
-.view-header-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--navy);line-height:1.2;}
-.view-header-sub{font-size:13px;color:var(--muted);margin-top:4px;}
-/* Better scrollbar */
-::-webkit-scrollbar{width:6px;height:6px;}
-::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:#C4CFDF;border-radius:4px;}
-::-webkit-scrollbar-thumb:hover{background:#a0b0c8;}
+/* ── MODAL TRANSFER ── */
+.modal-transfer{display:none;position:fixed;inset:0;background:rgba(15,31,69,.55);z-index:3000;align-items:center;justify-content:center;}
+.modal-transfer.open{display:flex;}
+.transfer-box{background:#fff;border-radius:16px;padding:28px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+.transfer-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--navy);margin-bottom:4px;}
+.transfer-sub{font-size:12px;color:var(--muted);margin-bottom:18px;}
+.transfer-select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:14px;color:var(--text);margin-bottom:16px;outline:none;}
+
+/* ── RESPONSIVO ── */
+@media(max-width:900px){
+  .kanban{grid-template-columns:repeat(2,1fr);}
+  .dash-grid{grid-template-columns:1fr;}
+  .arena-kpis{grid-template-columns:repeat(2,1fr);}
+}
 </style>
 </head>
 <body>
+
 <!-- LOGIN -->
 <div id="configScreen">
   <div class="config-box">
@@ -222,13 +377,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <div id="loginExistingDiv">
         <p class="config-sub">Selecione seu nome e informe sua senha.</p>
         <div class="config-section">Quem e voce?</div>
-        <select id="loginVendedor" style="width:100%;margin-bottom:10px;" onchange="document.getElementById('loginSenha').value=''"><option value="">Selecione seu nome...</option></select>
+        <select id="loginVendedor" style="width:100%;margin-bottom:10px;"><option value="">Selecione seu nome...</option></select>
         <input type="password" id="loginSenha" placeholder="Sua senha" style="width:100%;margin-bottom:10px;" onkeydown="if(event.key==='Enter')doLogin()"/>
         <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">Entrar</button>
         <div style="text-align:center;margin-top:10px;"><span style="font-size:12px;color:var(--muted);cursor:pointer;" onclick="toggleNewUser()">+ Primeiro acesso / novo cadastro</span></div>
       </div>
       <div id="loginNewDiv" style="display:none;">
-        <p class="config-sub">Preencha seus dados. Seu acesso sera liberado pelo gestor.</p>
+        <p class="config-sub">Preencha seus dados. Aguarde aprovacao do gestor.</p>
         <div class="config-section">Novo Cadastro</div>
         <input type="text" id="loginNome" placeholder="Seu nome completo" style="width:100%;margin-bottom:10px;"/>
         <div class="config-row" style="margin-bottom:10px;">
@@ -246,20 +401,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </div>
 </div>
 
-<!-- APP -->
 <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeMobileSidebar()"></div>
-<div id="app" style="display:none;flex-direction:column;">
-  <!-- TOPBAR -->
+
+<div id="app">
   <div class="topbar">
     <div class="topbar-left">
-      <button id="btnMobileMenu" style="display:none;background:none;border:none;color:#7ea8cc;cursor:pointer;margin-right:4px;padding:4px;" onclick="toggleMobileSidebar()">
+      <button class="topbar-hamburger" id="btnHamburger" onclick="toggleMobileSidebar()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
+      <div style="width:8px;"></div>
       <div class="topbar-dot"></div>
-      <div>
-        <div class="topbar-brand">CVM &middot; Funil</div>
-        <div class="topbar-sub" id="topbarSub">Clube Viajar Mais</div>
-      </div>
+      <div><div class="topbar-brand">CVM &middot; Funil</div><div class="topbar-sub" id="topbarSub">Clube Viajar Mais</div></div>
     </div>
     <div class="topbar-right">
       <div id="pendenteBadge" style="display:none;background:var(--yellow);color:#7D5A00;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;cursor:pointer;" onclick="showView('equipe')">&#9888; <span id="pendenteCnt">0</span> pendentes</div>
@@ -268,52 +420,26 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       <div class="user-pill" onclick="logout()"><div class="user-avatar" id="userAvatar">?</div><span id="userName">&#8212;</span><span style="opacity:.5;font-size:10px;">Sair</span></div>
     </div>
   </div>
-  <!-- BODY = SIDEBAR + CONTENT -->
   <div class="app-body">
-    <!-- SIDEBAR -->
     <nav class="sidebar" id="sidebar">
-      <div class="sidebar-toggle" onclick="toggleSidebar()" title="Recolher">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
-      </div>
+      </button>
       <div class="sidebar-nav">
         <div class="sidebar-section">Principal</div>
-        <div class="nav-item active" id="nav-kanban" onclick="showView('kanban')" data-label="Meu Funil">
-          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="4" height="15" rx="1"/></svg></span>
-          <span class="nav-label">Meu Funil</span>
-        </div>
-        <div class="nav-item" id="nav-lista" onclick="showView('lista')" data-label="Lista">
-          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2" fill="currentColor"/><circle cx="3.5" cy="12" r="1.2" fill="currentColor"/><circle cx="3.5" cy="18" r="1.2" fill="currentColor"/></svg></span>
-          <span class="nav-label">Lista</span>
-        </div>
-        <div class="nav-item" id="nav-arena" onclick="showView('arena')" data-label="Arena">
-          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></span>
-          <span class="nav-label">Arena</span>
-        </div>
-        <div class="nav-item" id="nav-posvendas" onclick="showView('posvendas')" data-label="Pos Vendas">
-          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.17 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.08 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
-          <span class="nav-label">Pos Vendas</span>
-        </div>
+        <div class="nav-item active" id="nav-kanban" onclick="showView('kanban')" data-label="Meu Funil"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="4" height="15" rx="1"/></svg></span><span class="nav-label">Meu Funil</span></div>
+        <div class="nav-item" id="nav-lista" onclick="showView('lista')" data-label="Lista"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2" fill="currentColor"/><circle cx="3.5" cy="12" r="1.2" fill="currentColor"/><circle cx="3.5" cy="18" r="1.2" fill="currentColor"/></svg></span><span class="nav-label">Lista</span></div>
+        <div class="nav-item" id="nav-arena" onclick="showView('arena')" data-label="Arena"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></span><span class="nav-label">Arena</span></div>
+        <div class="nav-item" id="nav-posvendas" onclick="showView('posvendas')" data-label="Pos Vendas"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.17 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.08 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span><span class="nav-label">Pos Vendas</span></div>
         <div class="sidebar-section manager-only">Gestor</div>
-        <div class="nav-item manager-only" id="nav-dashboard" onclick="showView('dashboard')" data-label="Dashboard">
-          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span>
-          <span class="nav-label">Dashboard</span>
-        </div>
-        <div class="nav-item manager-only" id="nav-todosleads" onclick="showView('todosleads')" data-label="Todos os Leads">
-          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-          <span class="nav-label">Todos os Leads</span>
-        </div>
-        <div class="nav-item manager-only" id="nav-relatorio" onclick="showView('relatorio')" data-label="Relatorio">
-          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
-          <span class="nav-label">Relatorio</span>
-        </div>
-        <div class="nav-item manager-only" id="nav-equipe" onclick="showView('equipe')" data-label="Equipe &amp; Acessos">
-          <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
-          <span class="nav-label">Equipe &amp; Acessos</span>
-        </div>
+        <div class="nav-item manager-only" id="nav-dashboard" onclick="showView('dashboard')" data-label="Dashboard"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span><span class="nav-label">Dashboard</span></div>
+        <div class="nav-item manager-only" id="nav-todosleads" onclick="showView('todosleads')" data-label="Todos os Leads"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-label">Todos os Leads</span></div>
+        <div class="nav-item manager-only" id="nav-relatorio" onclick="showView('relatorio')" data-label="Relatorio"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span><span class="nav-label">Relatorio</span></div>
+        <div class="nav-item manager-only" id="nav-equipe" onclick="showView('equipe')" data-label="Equipe e Acessos"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="nav-label">Equipe &amp; Acessos</span></div>
       </div>
     </nav>
-    <!-- MAIN CONTENT -->
     <div class="app-content">
+
 <!-- KANBAN -->
   <div class="view active" id="view-kanban">
     <div class="kpi-strip" style="grid-template-columns:repeat(6,1fr);" id="myKpis"></div>
@@ -450,10 +576,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
       </div>
     </div>
     <div class="pv-kpi-strip" id="pvKpis"></div>
-    <div class="pv-kanban" id="pvKanban"></div>
-    </div>
-  </div>
-</div>
+    <div class="pv-kanban" id="pvKanban">
+    </div><!-- /app-content -->
+  </div><!-- /app-body -->
+</div><!-- /app -->
 
 <!-- MODAL TRANSFERENCIA -->
 <div class="modal-transfer" id="modalTransfer">
@@ -471,7 +597,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <!-- MODAL LEAD -->
 <div class="overlay" id="leadOverlay" onclick="if(event.target===this)closeLead()">
   <div class="modal">
-    <div class="modal-hd"><div class="modal-title" id="leadModalTitle">Novo Lead</div><button class="modal-close" onclick="closeLead()">x</button></div>
+    <div class="modal-hd"><div class="modal-title" id="leadModalTitle">Novo Lead</div><button class="modal-close" onclick="closeLead()">&#215;</button></div>
     <div class="modal-body">
       <div class="form-row">
         <div class="fgroup"><label>Nome do Cliente *</label><input type="text" id="fNome" placeholder="Nome completo"/></div>
@@ -482,7 +608,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         <div class="fgroup"><label>Periodo / Data</label><input type="text" id="fData" placeholder="Ex: Julho 2026"/></div>
       </div>
       <div class="form-row">
-        <div class="fgroup"><label>Canal de Entrada</label><select id="fCanal"><option value="">Selecione...</option><option>WhatsApp</option><option>Instagram</option><option>Facebook</option><option>Presencial</option><option>Telefone</option><option>Site</option></select></div>
+        <div class="fgroup"><label>Canal de Entrada</label>
+          <select id="fCanal"><option value="">Selecione...</option><option>WhatsApp</option><option>Instagram</option><option>Facebook</option><option>Presencial</option><option>Telefone</option><option>Site</option></select>
+        </div>
         <div class="fgroup"><label>Valor da Venda (R$)</label><input type="text" id="fValor" placeholder="Ex: 8500 ou 8.500,00" inputmode="decimal"/></div>
       </div>
       <div class="form-row">
@@ -492,19 +620,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
             <optgroup label="Pos Vendas"><option value="pv_pre">PV - Pre-Viagem</option><option value="pv_durante">PV - Durante</option><option value="pv_pos">PV - Pos-Viagem</option><option value="pv_recompra">PV - Recompra</option><option value="pv_indicacao">PV - Indicacao</option></optgroup>
           </select>
         </div>
-        <div class="fgroup"><label>Loja</label><select id="fLoja"><option value="">—</option><option>Boa Vista</option><option>Shopping SL</option><option>Assai Minas</option></select></div>
+        <div class="fgroup"><label>Loja</label><select id="fLoja"><option value="">&#8212;</option><option>Boa Vista</option><option>Shopping SL</option><option>Assai Minas</option></select></div>
       </div>
       <div class="fgroup"><label>Notas / Observacoes</label><textarea id="fNotas" placeholder="Interesse, orcamento, proximos passos..."></textarea></div>
-      <!-- PASSAGEIROS -->
       <div id="passageirosSec" style="border:1.5px solid var(--border);border-radius:10px;padding:12px;margin-top:4px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Passageiros do Grupo</div>
           <button class="btn btn-ghost btn-sm" type="button" onclick="addPassageiro()">+ Adicionar</button>
         </div>
         <div id="passageirosList"></div>
-        <div style="font-size:10px;color:var(--muted);margin-top:6px;">Marido e mulher, amigos viajando juntos? Cadastre todos aqui e feche em um unico negocio.</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;">Marido e mulher, amigos? Cadastre todos e feche em um unico negocio.</div>
       </div>
-      <!-- PRAZO / FOLLOW-UP -->
       <div id="prazoSec" style="display:none;border:1.5px solid #FED7AA;border-radius:10px;padding:12px;margin-top:4px;background:#FFFBEB;">
         <div style="font-size:11px;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Prazo &amp; Follow-up</div>
         <div class="form-row">
@@ -533,11 +659,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <!-- MODAL VENDEDOR -->
 <div class="overlay" id="vendedorOverlay" onclick="if(event.target===this)closeVendedor()">
   <div class="modal" style="max-width:460px;">
-    <div class="modal-hd"><div class="modal-title" id="vendedorModalTitle">Editar Acesso</div><button class="modal-close" onclick="closeVendedor()">x</button></div>
+    <div class="modal-hd"><div class="modal-title">Editar Acesso</div><button class="modal-close" onclick="closeVendedor()">&#215;</button></div>
     <div class="modal-body">
       <div class="fgroup"><label>Nome</label><input type="text" id="vNome" disabled style="background:#f5f7fc;color:var(--muted);"/></div>
       <div class="form-row">
-        <div class="fgroup"><label>Loja</label><select id="vLoja"><option value="">—</option><option>Boa Vista</option><option>Shopping SL</option><option>Assai Minas</option></select></div>
+        <div class="fgroup"><label>Loja</label><select id="vLoja"><option value="">&#8212;</option><option>Boa Vista</option><option>Shopping SL</option><option>Assai Minas</option></select></div>
         <div class="fgroup"><label>Meta Mensal (vendas)</label><input type="number" id="vMeta" min="1" max="999" placeholder="Ex: 15"/></div>
       </div>
       <div class="form-row">
@@ -558,7 +684,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 </div>
 
 <div class="toast" id="toast"></div>
+
 <script>
+
 
 const STAGES=['entrada','qualif','oferta','negoc','venda','perdido'];
 const SL={entrada:'1. Entrada',qualif:'2. Qualifica\u00E7\u00E3o',oferta:'3. Oferta',negoc:'4. Negocia\u00E7\u00E3o',venda:'5. Venda OK',perdido:'Perdido'};
@@ -1391,6 +1519,7 @@ function fmtNum(n){return Number(n).toLocaleString('pt-BR',{minimumFractionDigit
 function fmtDatetime(ts){return new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});}
 function fmtDate(ts){return new Date(ts).toLocaleDateString('pt-BR');}
 function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(type?' '+type:'');clearTimeout(t._to);t._to=setTimeout(function(){t.classList.remove('show');},2500);}
+
 
 </script>
 </body>
