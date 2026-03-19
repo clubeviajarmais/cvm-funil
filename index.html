@@ -947,6 +947,7 @@ function showView(name){
   if(name==='arena')loadArena();
   if(name==='posvendas')loadPosVendas();
   if(name==='relatorio')gerarRelatorio();
+  if(name==='comissoes')loadComissoes();
 }
 
 function filtMy(){var q=(document.getElementById('kSearch').value||'').toLowerCase(),c=document.getElementById('kCanal').value;return myLeads.filter(function(l){return(!q||((l.nome||'').toLowerCase().includes(q))||((l.destino||'').toLowerCase().includes(q)))&&(!c||l.canal===c);});}
@@ -1808,9 +1809,11 @@ var CVM_PGTO_OPTS = ['Cartao de Credito','Parcelado','PIX','Boleto','Debito','Tr
 // LOAD COMISSOES VIEW
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 function loadComissoes() {
-  cvmInitMetas(); // Semeia metas do mes se nao existirem
+  try {
+    cvmInitMetas();
+  } catch(e) { console.error('cvmInitMetas error:', e); }
   var c = document.getElementById('comissoes-content');
-  if (!c) return;
+  if (!c) { console.error('comissoes-content not found'); return; }
   var isManager = currentUser && currentUser._isManager;
   var now = new Date();
   var mesLabel = CVM_MESES[now.getMonth()] + ' ' + now.getFullYear();
@@ -2220,12 +2223,7 @@ function cvmSalvarVenda() {
   if (currentUser._isManager) { cvmRenderRanking(); cvmRenderAdmin(); }
 }
 
-// Hook no showView para carregar comissoes
-var _origShowView = showView;
-showView = function(name) {
-  _origShowView(name);
-  if (name === 'comissoes') loadComissoes();
-};
+// loadComissoes chamado direto no showView
 
 
 // Aplica todas as metas do mes de uma vez (para o admin)
