@@ -1570,25 +1570,51 @@ async function gerarRelatorio(){
   setSync(0);renderRelatorio();
 }
 function getLeadsPeriodo(){
+  // Leads CRIADOS no periodo (prospec\u00E7\u00E3o)
   var p=getRelPeriodo();
-  return relData.leads.filter(function(l){var d=new Date(l.updated_at||l.created_at);return d>=p.ini&&d<=p.fim;});
+  return relData.leads.filter(function(l){
+    var d=new Date(l.created_at);
+    return d>=p.ini&&d<=p.fim;
+  });
+}
+function getVendasPeriodo(){
+  // Vendas FECHADAS no periodo: etapa venda/pv_* com updated_at no periodo
+  var p=getRelPeriodo();
+  return relData.leads.filter(function(l){
+    if(!isVendaOuPv(l))return false;
+    // Considera a data em que foi movido para venda (updated_at)
+    var dtUpd=l.updated_at?new Date(l.updated_at):null;
+    var dtCri=new Date(l.created_at);
+    // Prioriza updated_at; fallback para created_at
+    var dt=dtUpd||dtCri;
+    return dt>=p.ini&&dt<=p.fim;
+  });
 }
 function renderRelatorio(){
   var lblEl=document.getElementById('relPeriodoLabel');if(lblEl)lblEl.textContent=getRelLabel();
-  var leads=getLeadsPeriodo(),allL=relData.leads,vends=relData.vendedores;
-  var totalLeads=leads.length,totalVendas=leads.filter(isVendaOuPv).length;
-  var conv=totalLeads?Math.round(totalVendas/totalLeads*100):0;
-  var valor=leads.filter(isVendaOuPv).reduce(function(a,l){return a+(l.valor_estimado||0);},0);
-  var parados=leads.filter(function(l){return daysSince(l.updated_at||l.created_at)>=3&&!isVendaOuPv(l)&&l.etapa!=='perdido';}).length;
+  // leads = prospectados no periodo | vendas = fechadas no periodo
+  var leads=getLeadsPeriodo();
+  var vendas=getVendasPeriodo();
+  var allL=relData.leads,vends=relData.vendedores;
+  var totalLeads=leads.length;
+  var totalVendas=vendas.length;
+  // Conversao: vendas fechadas / leads criados no mesmo periodo
+  var conv=totalLeads>0?Math.round(totalVendas/totalLeads*100):0;
+  var valor=vendas.reduce(function(a,l){return a+(parseFloat(l.valor_estimado)||0);},0);
+  // Parados: todos os leads ativos parados +3d (nao so do periodo)
+  var parados=allL.filter(function(l){return daysSince(l.updated_at||l.created_at)>=3&&!isVendaOuPv(l)&&l.etapa!=='perdido';}).length;
   var ticketMed=totalVendas?Math.round(valor/totalVendas):0;
   var kpiEl=document.getElementById('relKpis');
   if(kpiEl)kpiEl.innerHTML=[{icon:'[L]',val:totalLeads,label:'Leads no Periodo',color:''},{icon:'[V]',val:totalVendas,label:'Vendas Fechadas',color:'green'},{icon:'[%]',val:conv+'%',label:'Taxa de Conversao',color:conv>=15?'green':conv>=8?'':'orange'},{icon:'[R]',val:'R$ '+fmtNum(valor),label:'Valor Gerado',color:'green'},{icon:'[T]',val:'R$ '+fmtNum(ticketMed),label:'Ticket Medio',color:''},{icon:'[!]',val:parados,label:'Leads Parados',color:parados?'red':''}].map(function(k){return'<div class="kpi-card '+k.color+'"><div style="font-size:18px;margin-bottom:6px;">'+k.icon+'</div><div class="kpi-val" style="font-size:20px;">'+k.val+'</div><div class="kpi-label" style="margin-top:3px;">'+k.label+'</div></div>';}).join('');
   var rows=vends.map(function(v){
+    // Leads prospectados no periodo por este vendedor
     var vl=leads.filter(function(l){return l.vendedor_id===v.id;});
-    var vnd=vl.filter(isVendaOuPv).length;
-    var val2=vl.filter(isVendaOuPv).reduce(function(a,l){return a+(l.valor_estimado||0);},0);
+    // Vendas fechadas no periodo por este vendedor
+    var vndLeads=vendas.filter(function(l){return l.vendedor_id===v.id;});
+    var vnd=vndLeads.length;
+    var val2=vndLeads.reduce(function(a,l){return a+(parseFloat(l.valor_estimado)||0);},0);
     var par=allL.filter(function(l){return l.vendedor_id===v.id&&daysSince(l.updated_at||l.created_at)>=3&&!isVendaOuPv(l)&&l.etapa!=='perdido';}).length;
-    var cv=vl.length?Math.round(vnd/vl.length*100):0;
+    var cv=vl.length>0?Math.round(vnd/vl.length*100):0;
     var meta=v.meta_mensal||10;var pct=Math.min(Math.round(vnd/meta*100),100);
     var status=pct>=100?'Meta!':pct>=75?'Quase':pct>=50?'No caminho':'Atencao';
     var sBg=pct>=100?'#DCFCE7':pct>=75?'#FEF3C7':pct>=50?'#DBEAFE':'#FEE2E2';
@@ -1596,12 +1622,16 @@ function renderRelatorio(){
     return{v:v,vl:vl.length,vnd:vnd,val:val2,par:par,cv:cv,pct:pct,status:status,sBg:sBg,sColor:sColor};
   }).sort(function(a,b){return b.vnd-a.vnd;});
   var totalRow=rows.reduce(function(t,r){return{vl:t.vl+r.vl,vnd:t.vnd+r.vnd,val:t.val+r.val,par:t.par+r.par};},{vl:0,vnd:0,val:0,par:0});
+  // Nota: totalRow.vl = leads prospectados, totalRow.vnd = vendas fechadas
   var tbody=document.getElementById('relTbody');
   if(tbody)tbody.innerHTML=rows.map(function(r,i){return'<tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 14px;font-weight:700;">'+('123'[i]||'')+' '+esc(r.v.nome)+'</td><td style="padding:10px 14px;color:var(--muted);font-size:11px;">'+esc(r.v.loja||'\u2014')+'</td><td style="padding:10px 14px;text-align:center;">'+r.vl+'</td><td style="padding:10px 14px;text-align:center;font-weight:800;color:'+(r.vnd>0?'#166534':'var(--muted)')+';">'+r.vnd+'</td><td style="padding:10px 14px;text-align:center;font-weight:700;">'+r.cv+'%</td><td style="padding:10px 14px;text-align:right;font-family:\'DM Mono\',monospace;">R$ '+fmtNum(r.val)+'</td><td style="padding:10px 14px;text-align:center;"><div style="display:flex;align-items:center;gap:4px;justify-content:center;"><div style="width:40px;background:var(--border);border-radius:20px;height:5px;overflow:hidden;"><div style="width:'+r.pct+'%;height:100%;background:'+(r.pct>=100?'#22C55E':r.pct>=60?'var(--teal)':'var(--orange)')+';border-radius:20px;"></div></div><span style="font-size:10px;font-weight:700;">'+r.pct+'%</span></div></td><td style="padding:10px 14px;text-align:center;color:'+(r.par>0?'var(--red)':'var(--muted)')+';">'+r.par+'</td><td style="padding:10px 14px;text-align:center;"><span style="background:'+r.sBg+';color:'+r.sColor+';padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;">'+r.status+'</span></td></tr>';}).join('');
   var tfoot=document.getElementById('relTfoot');
   if(tfoot)tfoot.innerHTML='<tr style="background:var(--navy);color:#fff;"><td style="padding:10px 14px;font-weight:800;" colspan="2">TOTAL GERAL</td><td style="padding:10px 14px;text-align:center;font-weight:800;">'+totalRow.vl+'</td><td style="padding:10px 14px;text-align:center;font-weight:800;">'+totalRow.vnd+'</td><td style="padding:10px 14px;text-align:center;font-weight:800;">'+(totalRow.vl?Math.round(totalRow.vnd/totalRow.vl*100):0)+'%</td><td style="padding:10px 14px;text-align:right;font-weight:800;font-family:\'DM Mono\',monospace;">R$ '+fmtNum(totalRow.val)+'</td><td colspan="3" style="padding:10px 14px;"></td></tr>';
   var lojasEl=document.getElementById('relLojas');
-  if(lojasEl)lojasEl.innerHTML=['Boa Vista','Shopping SL','Assai Minas'].map(function(lj){var ll=leads.filter(function(l){return(l.loja||(l.vendedores&&l.vendedores.loja))===lj;});var vnd=ll.filter(isVendaOuPv).length;var val3=ll.filter(isVendaOuPv).reduce(function(a,l){return a+(l.valor_estimado||0);},0);var cv=ll.length?Math.round(vnd/ll.length*100):0;return'<div style="background:#fff;border-radius:12px;padding:16px;box-shadow:var(--sh);border:1px solid var(--border);border-top:4px solid var(--teal);"><div style="font-weight:800;color:var(--navy);margin-bottom:10px;">'+lj+'</div><div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Leads</span><strong>'+ll.length+'</strong></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Vendas</span><strong style="color:#166534;">'+vnd+'</strong></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Conversao</span><strong>'+cv+'%</strong></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;"><span style="color:var(--muted)">Valor</span><strong style="font-family:\'DM Mono\',monospace;">R$ '+fmtNum(val3)+'</strong></div></div>';}).join('');
+  if(lojasEl)lojasEl.innerHTML=['Boa Vista','Shopping SL','Assai Minas'].map(function(lj){
+    var ll=leads.filter(function(l){return(l.loja||(l.vendedores&&l.vendedores.loja))===lj;});
+    var vv=vendas.filter(function(l){return(l.loja||(l.vendedores&&l.vendedores.loja))===lj;});
+    var vnd=vv.length;var val3=vv.reduce(function(a,l){return a+(parseFloat(l.valor_estimado)||0);},0);var cv=ll.length?Math.round(vnd/ll.length*100):0;return'<div style="background:#fff;border-radius:12px;padding:16px;box-shadow:var(--sh);border:1px solid var(--border);border-top:4px solid var(--teal);"><div style="font-weight:800;color:var(--navy);margin-bottom:10px;">'+lj+'</div><div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Leads</span><strong>'+ll.length+'</strong></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Vendas</span><strong style="color:#166534;">'+vnd+'</strong></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted)">Conversao</span><strong>'+cv+'%</strong></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;"><span style="color:var(--muted)">Valor</span><strong style="font-family:\'DM Mono\',monospace;">R$ '+fmtNum(val3)+'</strong></div></div>';}).join('');
   var canaisEl=document.getElementById('relCanais');
   if(canaisEl){var canais={};leads.forEach(function(l){var c=l.canal||'Outros';canais[c]=(canais[c]||0)+1;});var totalC=leads.length||1;canaisEl.innerHTML=Object.entries(canais).sort(function(a,b){return b[1]-a[1];}).map(function(entry){var nome=entry[0],cnt=entry[1];var pct=Math.round(cnt/totalC*100);return'<div style="background:#fff;border-radius:10px;padding:12px 16px;box-shadow:var(--sh);border:1px solid var(--border);border-left:4px solid var(--teal);min-width:140px;"><div style="font-size:13px;font-weight:800;color:var(--navy);">'+nome+'</div><div style="font-size:20px;font-weight:800;color:var(--teal);margin:4px 0;">'+cnt+'</div><div style="font-size:10px;color:var(--muted);">'+pct+'% dos leads</div></div>';}).join('');}
 }
@@ -1636,707 +1666,427 @@ function toast(msg,type){var t=document.getElementById('toast');t.textContent=ms
 
 
 
-// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-// MODULO COMISSOES CVM
-// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// MODULO COMISSOES CVM \u2014 100% Supabase, sem localStorage
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 
-// --- Config ---
+// Configuracao da tabela de comissao
 var CVM_META_REC_PCT = 12; // Receita minima = 12% do volume bruto
-var CVM_CIRC = 408.41; // circumferencia do anel SVG r=65
+var CVM_CIRC = 408.41;
 
 var CVM_NIVEIS = [
-  {id:0, label:'Abaixo da Meta',  min:0,   max:99,  pct:5,  bonus:0,  cor:'var(--red)'},
-  {id:1, label:'Meta Batida',     min:100, max:129, pct:8,  bonus:0,  cor:'var(--orange)'},
-  {id:2, label:'Meta +30%',       min:130, max:149, pct:10, bonus:2,  cor:'#F9C74F'},
-  {id:3, label:'Meta +50%',       min:150, max:199, pct:12, bonus:4,  cor:'var(--mint)'},
-  {id:4, label:'Meta Dobrada',    min:200, max:999, pct:14, bonus:6,  cor:'#8B5CF6'},
+  {id:0, label:'Abaixo da Meta',  min:0,   max:99,  pct:5,  bonus:0, cor:'var(--red)'},
+  {id:1, label:'Meta Batida',     min:100, max:129, pct:8,  bonus:0, cor:'var(--orange)'},
+  {id:2, label:'Meta +30%',       min:130, max:149, pct:10, bonus:2, cor:'#F9C74F'},
+  {id:3, label:'Meta +50%',       min:150, max:199, pct:12, bonus:4, cor:'var(--mint)'},
+  {id:4, label:'Meta Dobrada',    min:200, max:999, pct:14, bonus:6, cor:'#8B5CF6'},
 ];
 
-// --- Storage (localStorage por enquanto, pode migrar para Supabase) ---
-function cvmLs(k, v) {
-  if (v === undefined) {
-    try { return JSON.parse(localStorage.getItem('cvm3_' + k)); } catch(e) { return null; }
-  }
-  localStorage.setItem('cvm3_' + k, JSON.stringify(v));
-}
-function cvmGetVendas(uid, m, a) {
-  var now = new Date();
-  m = (m !== undefined && m !== null) ? m : now.getMonth();
-  a = (a !== undefined && a !== null) ? a : now.getFullYear();
-  return cvmLs('cv_' + uid + '_' + m + '_' + a) || [];
-}
-function cvmSetVendas(uid, vs, m, a) {
-  var now = new Date();
-  m = (m !== undefined && m !== null) ? m : now.getMonth();
-  a = (a !== undefined && a !== null) ? a : now.getFullYear();
-  cvmLs('cv_' + uid + '_' + m + '_' + a, vs);
-}
-function cvmGetMeta(uid, m, a) {
-  var now = new Date();
-  m = (m !== undefined && m !== null) ? m : now.getMonth();
-  a = (a !== undefined && a !== null) ? a : now.getFullYear();
-  var saved = cvmLs('cvmeta_' + uid + '_' + m + '_' + a);
-  if (saved !== null) return parseFloat(saved) || 0;
-  // Tenta pegar da meta_valor do vendedor no allVendedores
-  var v = (allVendedores || []).find(function(x) { return x.id === uid; });
-  var metaBase = parseFloat((v && v.meta_valor) || 0);
-  if (metaBase > 0) return metaBase;
-  // Fallback por nome (metas definidas no sistema)
-  return cvmGetMetaPorNome(v && v.nome, m, a);
-}
-// Metas definidas por mes/ano e nome do consultor
-// Volume bruto necessario para gerar a receita minima
-// Receita minima = 12% do volume meta
-var CVM_METAS_FIXAS = {
-  // Marco 2026 (mes=2, ano=2026)
+// Metas de volume bruto por mes/ano e nome (case-insensitive)
+var CVM_METAS = {
   '2_2026': {
-    'Rafaella Miranda Santos': 235215.37,
-    'Aline Campelo Barbosa':   235215.37,
-    'Fernanda Carvalho Silva': 235215.37,
-    'Gabriel Cesar Rodrigues Costa': 235215.37,
-    'Jhulyene Rodrigues':      235215.37,
-    'Rafael Filipe Moura Oliveira': 235215.37,
-    'Antonio Henrique Vieira Almeida': 125000.00,
-    'Carla Cecilia Silva Sales': 125000.00,
-    'Ana Beatriz Nogueira Pereira': 235215.37,
-    'Maria Eduarda Estanislau Tolentino': 235215.37,
+    'rafaella':  235215.37,
+    'aline':     235215.37,
+    'fernanda':  235215.37,
+    'gabriel':   235215.37,
+    'jhulyene':  235215.37,
+    'jhuly':     235215.37,
+    'rafael filipe': 235215.37,
+    'antonio':   125000.00,
+    'carla':     125000.00,
+    'ana beatriz': 235215.37,
+    'maria eduarda': 235215.37,
   }
 };
-function cvmGetMetaPorNome(nome, m, a) {
-  if (!nome) return 0;
-  var key = m + '_' + a;
-  var tabela = CVM_METAS_FIXAS[key];
-  if (!tabela) return 0;
-  // Busca exata primeiro
-  if (tabela[nome]) return tabela[nome];
-  // Busca parcial (primeiro nome)
-  var primeiroNome = nome.split(' ')[0].toLowerCase();
-  for (var k in tabela) {
-    if (k.split(' ')[0].toLowerCase() === primeiroNome) return tabela[k];
-  }
-  return 0;
-}
-// Inicializa metas no localStorage para o mes/ano atual se nao existirem
-function cvmInitMetas() {
-  var vends = allVendedores || [];
-  var now = new Date();
-  var m = now.getMonth(), a = now.getFullYear();
-  var key = m + '_' + a;
-  var tabela = CVM_METAS_FIXAS[key];
-  if (!tabela) return;
-  vends.forEach(function(v) {
-    var saved = cvmLs('cvmeta_' + v.id + '_' + m + '_' + a);
-    if (saved === null) {
-      var meta = cvmGetMetaPorNome(v.nome, m, a);
-      if (meta > 0) {
-        cvmLs('cvmeta_' + v.id + '_' + m + '_' + a, meta);
-      }
-    }
-  });
-}
-function cvmSetMeta(uid, val, m, a) {
-  var now = new Date();
-  m = (m !== undefined && m !== null) ? m : now.getMonth();
-  a = (a !== undefined && a !== null) ? a : now.getFullYear();
-  cvmLs('cvmeta_' + uid + '_' + m + '_' + a, val);
-}
 
-// --- Utils ---
-var CVM_MESES = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var CVM_MESES_PT = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
+// Estado do modulo
+var cvmLeadsCache = null;
+var cvmLoadingComissoes = false;
+
+// \u2500\u2500 Utilitarios \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 function cvmFmt(v, compact) {
   var n = Math.round(parseFloat(v) || 0);
   if (compact && Math.abs(n) >= 1000) return 'R$ ' + (n/1000).toFixed(0) + 'k';
   return 'R$ ' + n.toLocaleString('pt-BR');
 }
-function cvmGenId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-}
-function cvmDiasUteisRestantes() {
-  var h = new Date(), mes = h.getMonth(), ano = h.getFullYear();
-  var fim = new Date(ano, mes + 1, 0);
-  var c = 0;
-  for (var d = h.getDate(); d <= fim.getDate(); d++) {
-    var dw = new Date(ano, mes, d).getDay();
-    if (dw !== 0 && dw !== 6) c++;
+function cvmMetaReceita(meta) { return meta * (CVM_META_REC_PCT/100); }
+function cvmGetMeta(uid, m, a) {
+  var now = new Date();
+  m = (m !== undefined) ? m : now.getMonth();
+  a = (a !== undefined) ? a : now.getFullYear();
+  // Busca meta salva no localStorage para este uid/mes/ano
+  var saved = localStorage.getItem('cvmmeta_' + uid + '_' + m + '_' + a);
+  if (saved) return parseFloat(saved) || 0;
+  // Fallback: busca por primeiro nome do vendedor
+  var key = m + '_' + a;
+  var tabela = CVM_METAS[key];
+  if (!tabela) return 0;
+  var vend = (allVendedores||[]).find(function(v){ return v.id === uid; });
+  if (!vend) return 0;
+  var nomeL = (vend.nome||'').toLowerCase();
+  for (var k in tabela) {
+    if (nomeL.startsWith(k) || k.split(' ').every(function(p){ return nomeL.includes(p); })) {
+      return tabela[k];
+    }
   }
-  return Math.max(c, 1);
+  // Fallback: meta_valor do vendedor no Supabase
+  return parseFloat(vend.meta_valor||0);
 }
-function cvmMetaReceita(meta) { return meta * (CVM_META_REC_PCT / 100); }
-function cvmTotalV(vs) { return vs.reduce(function(a, v) { return a + (parseFloat(v.valor) || 0); }, 0); }
-function cvmTotalRec(vs) { return vs.reduce(function(a, v) { return a + (parseFloat(v.receita) || 0); }, 0); }
-
+function cvmSetMeta(uid, val, m, a) {
+  var now = new Date();
+  m = (m !== undefined) ? m : now.getMonth();
+  a = (a !== undefined) ? a : now.getFullYear();
+  localStorage.setItem('cvmmeta_' + uid + '_' + m + '_' + a, val);
+}
 function cvmCalcNivel(recGerada, meta) {
-  if (!meta || meta <= 0) return { nivel: CVM_NIVEIS[0], pctRec: 0, bateu: false };
+  if (!meta||meta<=0) return {nivel:CVM_NIVEIS[0],pctRec:0,bateu:false};
   var mr = cvmMetaReceita(meta);
-  var pctRec = mr > 0 ? Math.round(recGerada / mr * 100) : 0;
-  if (pctRec < 100) return { nivel: CVM_NIVEIS[0], pctRec: pctRec, bateu: false };
+  var pctRec = mr>0 ? Math.round(recGerada/mr*100) : 0;
+  if (pctRec<100) return {nivel:CVM_NIVEIS[0],pctRec:pctRec,bateu:false};
   var nivel = CVM_NIVEIS[0];
-  for (var i = CVM_NIVEIS.length - 1; i >= 0; i--) {
-    if (pctRec >= CVM_NIVEIS[i].min) { nivel = CVM_NIVEIS[i]; break; }
+  for (var i=CVM_NIVEIS.length-1;i>=0;i--) {
+    if (pctRec>=CVM_NIVEIS[i].min){nivel=CVM_NIVEIS[i];break;}
   }
-  return { nivel: nivel, pctRec: pctRec, bateu: true };
+  return {nivel:nivel,pctRec:pctRec,bateu:true};
 }
 function cvmCalcComissao(recGerada, meta) {
   var r = cvmCalcNivel(recGerada, meta);
-  return { pct: r.nivel.pct, bolso: recGerada * (r.nivel.pct / 100), nivel: r.nivel, pctRec: r.pctRec, bateu: r.bateu };
+  return {pct:r.nivel.pct, bolso:recGerada*(r.nivel.pct/100), nivel:r.nivel, pctRec:r.pctRec, bateu:r.bateu};
 }
-function cvmCalcSim(volumeBruto, rentPct, meta) {
-  var receita = volumeBruto * (rentPct / 100);
+function cvmCalcSim(vol, rentPct, meta) {
+  var receita = vol*(rentPct/100);
   var r = cvmCalcNivel(receita, meta);
-  var pctBruto = meta > 0 ? Math.round(volumeBruto / meta * 100) : 0;
   var mr = cvmMetaReceita(meta);
-  return { receita: receita, pctRec: r.pctRec, pctBruto: pctBruto, nivel: r.nivel,
-           bolso: receita * (r.nivel.pct / 100), pct: r.nivel.pct, bateu: r.bateu,
-           faltaVol: Math.max(meta - volumeBruto, 0), faltaRec: Math.max(mr - receita, 0) };
+  return {receita:receita, pctRec:r.pctRec, pctBruto:meta>0?Math.round(vol/meta*100):0,
+          nivel:r.nivel, bolso:receita*(r.nivel.pct/100), pct:r.nivel.pct, bateu:r.bateu,
+          faltaVol:Math.max(meta-vol,0), faltaRec:Math.max(mr-receita,0)};
+}
+function cvmDiasUteisRest() {
+  var h=new Date(),mes=h.getMonth(),ano=h.getFullYear();
+  var fim=new Date(ano,mes+1,0);var c=0;
+  for(var d=h.getDate();d<=fim.getDate();d++){var dw=new Date(ano,mes,d).getDay();if(dw!==0&&dw!==6)c++;}
+  return Math.max(c,1);
+}
+// Rentabilidade: campo rent_pct nos leads (se existir), default 9%
+function cvmGetRentPct(lead) {
+  return 9; // Rentabilidade padrao CVM
+}
+// Calcula receita de um lead baseado em valor_estimado e rentabilidade
+function cvmLeadReceita(lead) {
+  // Calcula receita estimada: valor_estimado * 9% (rentabilidade padrao da CVM)
+  // Sem campo rent_pct no banco \u2014 usa 9% como padrao do mercado de turismo
+  var val = parseFloat(lead.valor_estimado) || 0;
+  return Math.round(val * 0.09);
 }
 
-// Filtra vendas do mes atual
-function cvmVendasMes(uid) {
+// \u2500\u2500 Carrega leads do Supabase para o mes atual \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+async function cvmCarregarLeads(forceReload) {
+  if (cvmLeadsCache && !forceReload) return cvmLeadsCache;
   var now = new Date();
-  var m = now.getMonth(), a = now.getFullYear();
-  return cvmGetVendas(uid, m, a).filter(function(v) {
-    var d = new Date(v.data + 'T12:00:00');
-    return d.getMonth() === m && d.getFullYear() === a;
+  var mesIni = new Date(now.getFullYear(), now.getMonth(), 1);
+  var mesFim = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59);
+  // Busca leads em etapa venda ou pv_* sem filtro de data (filtra no JS)
+  var r = await sb.from('leads')
+    .select('id,vendedor_id,valor_estimado,etapa,created_at,updated_at,nome,loja')
+    .or('etapa.eq.venda,etapa.like.pv_%')
+    .eq('arquivado', false);
+  var allVendas = r.data || [];
+  // Filtra apenas os do mes atual pelo updated_at (quando foi fechada a venda)
+  var leads = allVendas.filter(function(l) {
+    var dtUpd = l.updated_at ? new Date(l.updated_at) : null;
+    var dtCri = new Date(l.created_at);
+    var dt = dtUpd || dtCri;
+    return dt >= mesIni && dt <= mesFim;
+  });
+  cvmLeadsCache = leads;
+  return leads;
+}
+// Leads de um vendedor especifico
+function cvmLeadsVendedor(leads, uid) {
+  return leads.filter(function(l){ return l.vendedor_id===uid; });
+}
+
+// \u2500\u2500 TELA PRINCIPAL \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function loadComissoes() {
+  if (!currentUser) {
+    var c0=document.getElementById('comissoes-content');
+    if(c0)c0.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted);">Carregando...</div>';
+    setTimeout(loadComissoes,500);return;
+  }
+  var c=document.getElementById('comissoes-content');
+  if(!c)return;
+  var isManager=currentUser._isManager;
+  var now=new Date();
+  c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted);"><span class="spin"></span> Carregando dados...</div>';
+  cvmCarregarLeads(true).then(function(leads){
+    var tabs=[
+      {id:'ccvm-meta',    label:'Minha Meta'},
+      {id:'ccvm-comissao',label:'Comissao'},
+      {id:'ccvm-sim',     label:'Simulador'},
+    ];
+    if(isManager){
+      tabs.push({id:'ccvm-ranking',label:'Ranking'});
+      tabs.push({id:'ccvm-admin',  label:'Admin'});
+    }
+    var tabBtns=tabs.map(function(t,i){return'<button class="com-cvm-tab'+(i===0?' active':'')+'" data-tabid="'+t.id+'">'+t.label+'</button>';}).join('');
+    var tabPanels=tabs.map(function(t,i){return'<div class="com-cvm-content'+(i===0?' active':'')+'" id="'+t.id+'"></div>';}).join('');
+    c.innerHTML='<div style="margin-bottom:18px;"><div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:var(--navy);">Comissoes CVM</div><div style="font-size:12px;color:var(--muted);margin-top:3px;">'+CVM_MESES_PT[now.getMonth()]+' '+now.getFullYear()+' - dados ao vivo do Supabase</div></div><div class="com-cvm-tabs">'+tabBtns+'</div>'+tabPanels;
+    c.querySelectorAll('.com-cvm-tab').forEach(function(btn){
+      btn.addEventListener('click',function(){cvmShowTab(btn.getAttribute('data-tabid'),btn);});
+    });
+    cvmRenderMeta(leads);
+    cvmRenderComissao(leads);
+    cvmRenderSim(leads);
+    if(isManager){cvmRenderRanking(leads);cvmRenderAdmin(leads);}
+  }).catch(function(e){
+    c.innerHTML='<div style="padding:24px;color:var(--red);">Erro ao carregar: '+e.message+'</div>';
   });
 }
 
-// Estado do modal venda CVM
-var cvmPgtoCount = 1;
-var CVM_PGTO_OPTS = ['Cartao de Credito','Parcelado','PIX','Boleto','Debito','Transferencia'];
-
-// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-// LOAD COMISSOES VIEW
-// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
-// \u2500\u2500\u2500 SEMENTE DE VENDAS MARCO 2026 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-// Importado do Excel VENDAS_CLUBE_MARCO.xlsx
-// Executado uma vez ao carregar Comissoes
-var CVM_VENDAS_SEED = {"Rafaella Miranda Santos": [{"id": "8xzagieri", "nome": "Gizele Ferreira da Silva", "valor": 2803.59, "receita": 229.37, "rent": 8.2, "data": "2026-03-01", "dest": "", "pgto": "Sistema"}, {"id": "8zfjqwc8j", "nome": "THAIS DE SOUZA PEREIRA", "valor": 9894.0, "receita": 1044.57, "rent": 10.6, "data": "2026-03-01", "dest": "", "pgto": "Sistema"}, {"id": "cchqj10ff", "nome": "DANIELE DE SOUZA PEREIRA SANTIAGO", "valor": 3298.0, "receita": 362.49, "rent": 11.0, "data": "2026-03-01", "dest": "", "pgto": "Sistema"}, {"id": "l4z5hf0mk", "nome": "Clarice SILVA", "valor": 5620.31, "receita": 127.18, "rent": 2.3, "data": "2026-03-01", "dest": "", "pgto": "Sistema"}, {"id": "9zctyxrp8", "nome": "JEFERSON OLIVEIRA", "valor": 11236.64, "receita": 750.93, "rent": 6.7, "data": "2026-03-01", "dest": "", "pgto": "Sistema"}, {"id": "c5t8iavgv", "nome": "Kerollay Alves Santiago", "valor": 1947.32, "receita": 216.75, "rent": 11.1, "data": "2026-03-02", "dest": "", "pgto": "Sistema"}, {"id": "12jisr80t", "nome": "KASSIA MARA MENDON\u00c7A ABREU TEIXEIRA", "valor": 5454.17, "receita": 363.84, "rent": 6.7, "data": "2026-03-02", "dest": "", "pgto": "Sistema"}, {"id": "7uwhh1pfc", "nome": "MELINA LELLES", "valor": 5454.17, "receita": 363.84, "rent": 6.7, "data": "2026-03-02", "dest": "", "pgto": "Sistema"}, {"id": "d1ibydoeg", "nome": "Patricia Aguiar Ribeiro", "valor": 5485.84, "receita": 366.05, "rent": 6.7, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "q5nld75f3", "nome": "Maria Angela Tonelli", "valor": 5820.79, "receita": 573.44, "rent": 9.9, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "wz3ubk7ie", "nome": "SIMONE CRISTINA DE MATOS", "valor": 6801.67, "receita": 459.07, "rent": 6.7, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "146y50b5w", "nome": "VANESSA CAMPELO MACIEL", "valor": 5485.84, "receita": 366.05, "rent": 6.7, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "fdynz0yk7", "nome": "GABRIELLA LOPES FARIA RIBEIRO", "valor": 6600.0, "receita": 542.97, "rent": 8.2, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "uuf5czkyv", "nome": "Nayara Santos", "valor": 2581.63, "receita": 158.19, "rent": 6.1, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "fyt4oz603", "nome": "MARCIO FRANCISCO DA COSTA", "valor": 4954.68, "receita": 423.08, "rent": 8.5, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "y5028xniu", "nome": "LETICIA VERISSIMO ALVES DA SILVA", "valor": 11600.0, "receita": 1127.42, "rent": 9.7, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "t93dv4pqo", "nome": "LUIS ANTONIO DO AMARAL", "valor": 1760.0, "receita": 154.07, "rent": 8.8, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "35ry34o5d", "nome": "LEONARDO HENRIQUE GONCALVES TEIXEIRA", "valor": 17250.0, "receita": 1753.7, "rent": 10.2, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "x315yz5g9", "nome": "Carlos Moreira da Silva", "valor": 0.0, "receita": 0.0, "rent": 9.0, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "zt2rxi9fi", "nome": "CINTIA APARECIDA MOREIRA DA SILVA", "valor": 1627.0, "receita": 519.41, "rent": 31.9, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "oyymhazhe", "nome": "Alzeni Pinheiro de Sousa", "valor": 5871.14, "receita": 384.79, "rent": 6.6, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "jb9zju22y", "nome": "Thais de jesus Guimar\u00e3es", "valor": 5262.0, "receita": 321.83, "rent": 6.1, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "xztujvfm3", "nome": "KASSIA MARA MENDON\u00c7A ABREU TEIXEIRA", "valor": 5823.84, "receita": 389.71, "rent": 6.7, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "dpndhupcw", "nome": "ANA CLAUDIA ALMEIDA", "valor": 6794.0, "receita": 1132.55, "rent": 16.7, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "lwr8w0ud4", "nome": "Francislene Tonoli", "valor": 4485.0, "receita": 607.77, "rent": 13.6, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "qucc4e6y9", "nome": "DANIEL VIEIRA", "valor": 6174.83, "receita": 475.64, "rent": 7.7, "data": "2026-03-10", "dest": "", "pgto": "Sistema"}, {"id": "x4566k0pu", "nome": "INGRID FIGUEIREDO", "valor": 6214.41, "receita": 417.06, "rent": 6.7, "data": "2026-03-10", "dest": "", "pgto": "Sistema"}, {"id": "9h6rg1mva", "nome": "Nicolaos Limotyrakis", "valor": 4440.33, "receita": 376.3, "rent": 8.5, "data": "2026-03-10", "dest": "", "pgto": "Sistema"}, {"id": "iva2mv3e3", "nome": "LUZIA ALVES DOS REIS LOPES", "valor": 5449.06, "receita": 169.22, "rent": 3.1, "data": "2026-03-10", "dest": "", "pgto": "Sistema"}, {"id": "shytzt219", "nome": "MIRIAM FERREIRA", "valor": 2976.15, "receita": 191.75, "rent": 6.4, "data": "2026-03-11", "dest": "", "pgto": "Sistema"}, {"id": "hf101b3en", "nome": "ABIAS MOREIRA", "valor": 3662.2, "receita": 461.16, "rent": 12.6, "data": "2026-03-11", "dest": "", "pgto": "Sistema"}, {"id": "pv8zbfx32", "nome": "CIBELE MILAGRES COSTA", "valor": 660.0, "receita": 506.5, "rent": 76.7, "data": "2026-03-11", "dest": "", "pgto": "Sistema"}, {"id": "5c4llsp14", "nome": "Luara Araujo Nascimento", "valor": 4809.95, "receita": 401.88, "rent": 8.4, "data": "2026-03-12", "dest": "", "pgto": "Sistema"}, {"id": "sibir9w2k", "nome": "PAULA LOPES", "valor": 4502.27, "receita": 401.88, "rent": 8.9, "data": "2026-03-12", "dest": "", "pgto": "Sistema"}, {"id": "it2h58ajz", "nome": "Adilson Portilho Lustosa Junior", "valor": 18900.0, "receita": 2719.35, "rent": 14.4, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "xvw0zcgon", "nome": "Matheus Henrique Luziano de Oliveira", "valor": 7049.31, "receita": 476.2, "rent": 6.8, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "mkqfwev09", "nome": "Camila Soares Lemes", "valor": 1122.0, "receita": 396.49, "rent": 35.3, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "fp0fhof18", "nome": "ANA LUCIA FERNANDES GONCALVES", "valor": 5615.71, "receita": 417.49, "rent": 7.4, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "vkkdibyjw", "nome": "EDNA NUNES MENDES LOPES", "valor": 8198.63, "receita": 548.34, "rent": 6.7, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "55qf6px7r", "nome": "FERNANDO VANUNCE", "valor": 6879.72, "receita": 493.88, "rent": 7.2, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "2hspfyfpf", "nome": "Renata Cristina de Morais", "valor": 5654.48, "receita": 740.42, "rent": 13.1, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "mxn69s1sv", "nome": "ANILSON DA COSTA SILVA", "valor": 3183.0, "receita": 266.83, "rent": 8.4, "data": "2026-03-15", "dest": "", "pgto": "Sistema"}, {"id": "uxsqy81l5", "nome": "DANIELA ARAUJO DA SILVA", "valor": 2984.24, "receita": 185.19, "rent": 6.2, "data": "2026-03-15", "dest": "", "pgto": "Sistema"}, {"id": "w0hd6361h", "nome": "KELLY SANTOS", "valor": 32240.75, "receita": 2948.7, "rent": 9.1, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "d52try3g3", "nome": "Maria Izaura Guedes Drummond Dias", "valor": 5623.1, "receita": 531.08, "rent": 9.4, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "2to30aszq", "nome": "J\u00falia Campelo Pontes", "valor": 5125.47, "receita": 333.22, "rent": 6.5, "data": "2026-03-18", "dest": "", "pgto": "Sistema"}, {"id": "86od8gew2", "nome": "TRAZILBO DE OLIVEIRA SATHLER", "valor": 6680.27, "receita": 1385.84, "rent": 20.7, "data": "2026-03-19", "dest": "", "pgto": "Sistema"}, {"id": "6rykki0mo", "nome": "CLAUDIA MARA DE OLIVEIRA", "valor": 14473.82, "receita": 1176.68, "rent": 8.1, "data": "2026-03-19", "dest": "", "pgto": "Sistema"}, {"id": "kkirgccqm", "nome": "ARIANNA MORAES SILVEIRA", "valor": 7190.38, "receita": 601.42, "rent": 8.4, "data": "2026-03-19", "dest": "", "pgto": "Sistema"}, {"id": "qy8r8lers", "nome": "VALQUIRIA DE SOUZA", "valor": 5408.28, "receita": 360.8, "rent": 6.7, "data": "2026-03-19", "dest": "", "pgto": "Sistema"}], "Gabriel Cesar Rodrigues Costa": [{"id": "r197gxiqj", "nome": "MAICON HENRIQUE DE ALCANTARA COSTA", "valor": 4699.0, "receita": 697.18, "rent": 14.8, "data": "2026-03-01", "dest": "", "pgto": "Sistema"}, {"id": "h4m0uoqv6", "nome": "LUIZ RAFAEL ALMEIDA ALVES", "valor": 2500.0, "receita": 298.48, "rent": 11.9, "data": "2026-03-01", "dest": "", "pgto": "Sistema"}, {"id": "zystvyjw3", "nome": "M\u00e1rcia Daniele da Silva", "valor": 4071.36, "receita": 345.11, "rent": 8.5, "data": "2026-03-02", "dest": "", "pgto": "Sistema"}, {"id": "4z7xe9k49", "nome": "ELIENE ROSIMAR DE MEDEIROS SOBRAL", "valor": 2385.84, "receita": 443.52, "rent": 18.6, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "iwsqhoqiy", "nome": "ANA ELIZABETH MELO LIMA", "valor": 790.32, "receita": 395.16, "rent": 50.0, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "7wkr99bpr", "nome": "ROSANA PEREIRA DE BARROS", "valor": 1185.49, "receita": 592.75, "rent": 50.0, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "8y2y0glv9", "nome": "RICARDO ANTONIO DUARTE TAVARES", "valor": 7038.85, "receita": 608.62, "rent": 8.6, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "g5jz1w503", "nome": "GESSICA GON\u00c7ALVES RODRIGUES FONSECA", "valor": 11596.0, "receita": 1019.8, "rent": 8.8, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "seegolpct", "nome": "Tainara Alves de Freitas", "valor": 5142.74, "receita": 697.18, "rent": 13.6, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "l5bt53bf0", "nome": "LARISSA JULIANE LEMOS CARVALHO CUNHA", "valor": 4599.0, "receita": 638.1, "rent": 13.9, "data": "2026-03-07", "dest": "", "pgto": "Sistema"}, {"id": "v6ep6j1ts", "nome": "Wando Alves da Silva", "valor": 4735.0, "receita": 438.2, "rent": 9.3, "data": "2026-03-07", "dest": "", "pgto": "Sistema"}, {"id": "v5fqt0yq9", "nome": "LARISSA JULIANE LEMOS CARVALHO CUNHA", "valor": 2032.52, "receita": 492.84, "rent": 24.2, "data": "2026-03-07", "dest": "", "pgto": "Sistema"}, {"id": "sx6mgez1i", "nome": "Rosana Maria de Melo Viana", "valor": 2899.0, "receita": 452.75, "rent": 15.6, "data": "2026-03-09", "dest": "", "pgto": "Sistema"}, {"id": "vsuwg5e8q", "nome": "LUANA MARQUES DE OLIVEIRA", "valor": 7900.0, "receita": 682.5, "rent": 8.6, "data": "2026-03-10", "dest": "", "pgto": "Sistema"}, {"id": "yuiualk98", "nome": "Ana Fl\u00e1via Aparecida Moreira Santos", "valor": 5080.0, "receita": 573.34, "rent": 11.3, "data": "2026-03-10", "dest": "", "pgto": "Sistema"}, {"id": "p62uiiqtg", "nome": "Diego Afonso Alves", "valor": 4761.13, "receita": 314.75, "rent": 6.6, "data": "2026-03-11", "dest": "", "pgto": "Sistema"}, {"id": "smj5vm7ci", "nome": "Diego Afonso Alves", "valor": 5821.82, "receita": 379.72, "rent": 6.5, "data": "2026-03-11", "dest": "", "pgto": "Sistema"}, {"id": "9k41zfunf", "nome": "CLAUDIA JUNIA DE OLIVEIRA ANDRADE", "valor": 2451.88, "receita": 328.25, "rent": 13.4, "data": "2026-03-11", "dest": "", "pgto": "Sistema"}, {"id": "9suq2dasu", "nome": "VICTORIA GON\u00c7ALVES IBRAHIM MENDES DE SOU", "valor": 4900.73, "receita": 380.05, "rent": 7.8, "data": "2026-03-12", "dest": "", "pgto": "Sistema"}, {"id": "rq5r89c5q", "nome": "Marina Alves Marton", "valor": 4990.57, "receita": 424.66, "rent": 8.5, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "xv4zm2ooy", "nome": "Tha\u00eds Meniken Felipe", "valor": 1689.0, "receita": 519.41, "rent": 30.8, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "wxoyetl6r", "nome": "ALINNE PEREIRA GONCALVES COSTA", "valor": 4913.79, "receita": 1145.15, "rent": 23.3, "data": "2026-03-15", "dest": "", "pgto": "Sistema"}, {"id": "iyda4pjdy", "nome": "AMANDA CAROLINE GON\u00c7ALVES MARQUES LIMA", "valor": 2999.99, "receita": 461.58, "rent": 15.4, "data": "2026-03-15", "dest": "", "pgto": "Sistema"}, {"id": "bbl1yxzf0", "nome": "TAMIRYS APARECIDA LOURENCO FONSECA", "valor": 7099.0, "receita": 1514.95, "rent": 21.3, "data": "2026-03-15", "dest": "", "pgto": "Sistema"}, {"id": "aguqgqffk", "nome": "DAVI DE MELLO LUPIANO", "valor": 4300.0, "receita": 493.92, "rent": 11.5, "data": "2026-03-15", "dest": "", "pgto": "Sistema"}, {"id": "i1ayn71gj", "nome": "SERGIO OLIVEIRA FONSECA", "valor": 10043.56, "receita": 686.0, "rent": 6.8, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "q5t648ceb", "nome": "Gabriel Alexandre Martins", "valor": 4503.27, "receita": 292.7, "rent": 6.5, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "epql65im8", "nome": "Railane Guilherme dos Santos", "valor": 2630.0, "receita": 197.36, "rent": 7.5, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "dy000hciv", "nome": "Sayonara de Freitas Franca Teixeira", "valor": 11912.0, "receita": 1061.64, "rent": 8.9, "data": "2026-03-18", "dest": "", "pgto": "Sistema"}], "Fernanda Carvalho Silva": [{"id": "go9dsxq10", "nome": "ROBERTO CARVALHO", "valor": 6473.2, "receita": 777.73, "rent": 12.0, "data": "2026-03-02", "dest": "", "pgto": "Sistema"}, {"id": "uloa0i4pa", "nome": "Nilton Campos Fernandes", "valor": 9021.14, "receita": 1124.48, "rent": 12.5, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "qkk8mx6my", "nome": "Nubia Helena de Oliveira", "valor": 1892.69, "receita": 249.61, "rent": 13.2, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "3h3xwagzi", "nome": "Monica Michelle Alves", "valor": 4608.12, "receita": 376.11, "rent": 8.2, "data": "2026-03-07", "dest": "", "pgto": "Sistema"}, {"id": "1c4w3od6g", "nome": "LIDIANE COSTA", "valor": 18627.68, "receita": 3697.08, "rent": 19.8, "data": "2026-03-08", "dest": "", "pgto": "Sistema"}, {"id": "a94pdnglg", "nome": "Carlos Roberto Fernandes", "valor": 3019.65, "receita": 599.36, "rent": 19.8, "data": "2026-03-08", "dest": "", "pgto": "Sistema"}, {"id": "wpdny6yie", "nome": "WINDISON APARECIDO DO ESPIRITO SANTO", "valor": 5903.16, "receita": 692.27, "rent": 11.7, "data": "2026-03-09", "dest": "", "pgto": "Sistema"}, {"id": "vfwl0f7vo", "nome": "Maria Julia de Almeida", "valor": 2302.98, "receita": 1151.49, "rent": 50.0, "data": "2026-03-12", "dest": "", "pgto": "Sistema"}, {"id": "hacq2lrdm", "nome": "PATR\u00cdSCIA CAROLINE SILVA PEREIRA", "valor": 7925.91, "receita": 651.63, "rent": 8.2, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "ictnoy5kw", "nome": "GILDESIO PORTO", "valor": 8693.64, "receita": 590.78, "rent": 6.8, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "cob3u0iko", "nome": "TATIANE MARTINS DE AQUINO", "valor": 28340.2, "receita": 1912.7, "rent": 6.7, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "hojduk7kk", "nome": "CINTIA APARECIDA PINHEIRO AVELAR LELES", "valor": 4916.0, "receita": 728.78, "rent": 14.8, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "pw887cexe", "nome": "Carolina Campos", "valor": 219.99, "receita": 30.8, "rent": 14.0, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}], "Antonio Henrique Vieira Almeida": [{"id": "aj190le6w", "nome": "Vanderci Paix\u00e3o", "valor": 3369.65, "receita": 280.31, "rent": 8.3, "data": "2026-03-02", "dest": "", "pgto": "Sistema"}, {"id": "ya1o5hysv", "nome": "ANA PAULA MARTINS DE PAULA", "valor": 1967.58, "receita": 122.71, "rent": 6.2, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "gyjo5wtpb", "nome": "MARCIO AGOSTINHO PEREIRA", "valor": 3549.36, "receita": 228.77, "rent": 6.4, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "74iom8n7l", "nome": "Janaina Michel Senra", "valor": 3573.03, "receita": 235.1, "rent": 6.6, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "887nsbdr0", "nome": "Tiago Leandro Cunha Silva", "valor": 5531.12, "receita": 354.01, "rent": 6.4, "data": "2026-03-07", "dest": "", "pgto": "Sistema"}, {"id": "692ext818", "nome": "Rodrigo Oliveira da Rocha", "valor": 4398.56, "receita": 277.87, "rent": 6.3, "data": "2026-03-07", "dest": "", "pgto": "Sistema"}, {"id": "v5or5d7pq", "nome": "Marcos Aurelio Rocha da Silva", "valor": 6170.41, "receita": 396.21, "rent": 6.4, "data": "2026-03-07", "dest": "", "pgto": "Sistema"}, {"id": "etre2t5w4", "nome": "William Lima de Andrade", "valor": 5375.97, "receita": 358.54, "rent": 6.7, "data": "2026-03-10", "dest": "", "pgto": "Sistema"}, {"id": "n8hmu1vbb", "nome": "Ana clara Marazzi Souza", "valor": 3338.04, "receita": 277.57, "rent": 8.3, "data": "2026-03-10", "dest": "", "pgto": "Sistema"}, {"id": "0xexd6qvb", "nome": "Vinicius Tadeu Rodrigues Pinheiro", "valor": 5495.74, "receita": 572.19, "rent": 10.4, "data": "2026-03-12", "dest": "", "pgto": "Sistema"}, {"id": "cem4l10zj", "nome": "Carlos Henrique Barbosa", "valor": 3800.0, "receita": 759.98, "rent": 20.0, "data": "2026-03-12", "dest": "", "pgto": "Sistema"}, {"id": "42izkxuoj", "nome": "Felipe Nunes Nascimento", "valor": 6557.12, "receita": 643.05, "rent": 9.8, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "8wn4z51hy", "nome": "Maria Angela de Araujo", "valor": 9999.31, "receita": 739.8, "rent": 7.4, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "84zktbn06", "nome": "Glauber Ramon Sales", "valor": 3788.13, "receita": 645.61, "rent": 17.0, "data": "2026-03-16", "dest": "", "pgto": "Sistema"}], "Aline Campelo Barbosa": [{"id": "95mdalsxs", "nome": "Alexsandro Jos\u00e9 Batista Miranda", "valor": 8160.94, "receita": 977.27, "rent": 12.0, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "st5xjhobr", "nome": "DANIELA FERREIRA", "valor": 1571.06, "receita": 219.95, "rent": 14.0, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "4ftz1vb9d", "nome": "Roney De Nazareth Gott", "valor": 889.25, "receita": 109.25, "rent": 12.3, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "j1kr39o6q", "nome": "ALMIR ABREU NETO", "valor": 6237.11, "receita": 664.98, "rent": 10.7, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "tcrp9fz3a", "nome": "Viviane Ferreira Freitas", "valor": 8160.94, "receita": 977.27, "rent": 12.0, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "9kzx6p1lt", "nome": "Sidney Batista Carvalho", "valor": 8160.94, "receita": 977.24, "rent": 12.0, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "185y0t4vj", "nome": "Wellington Alves Rodrigues", "valor": 8160.94, "receita": 977.27, "rent": 12.0, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "768mnltcm", "nome": "Edna Conceicao Carvalho", "valor": 8160.94, "receita": 977.27, "rent": 12.0, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "uhq4nynld", "nome": "Minervina Martins de Souza", "valor": 8160.94, "receita": 977.27, "rent": 12.0, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "t2qpj8c86", "nome": "Luis Gustavo Santos", "valor": 5929.14, "receita": 369.99, "rent": 6.2, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "akcmodyhw", "nome": "Mires Silveria", "valor": 2434.04, "receita": 194.76, "rent": 8.0, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "ovt3si6xs", "nome": "Jose Venancio dos Santos Neto", "valor": 8160.94, "receita": 977.24, "rent": 12.0, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "j1cmdszq9", "nome": "Gustavo Silva Andrade", "valor": 2660.56, "receita": 380.84, "rent": 14.3, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "mchiicy6k", "nome": "Hugo Tomaz de Aquino", "valor": 2917.9, "receita": 251.53, "rent": 8.6, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "odc6rca5z", "nome": "Weder Wagner da Silva", "valor": 8160.94, "receita": 977.24, "rent": 12.0, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "rpn94l484", "nome": "Jaqueline da Paix\u00e3o Cota", "valor": 8473.93, "receita": 942.1, "rent": 11.1, "data": "2026-03-07", "dest": "", "pgto": "Sistema"}, {"id": "38aatfxas", "nome": "CRISTIANE LIMA", "valor": 4208.63, "receita": 269.03, "rent": 6.4, "data": "2026-03-12", "dest": "", "pgto": "Sistema"}, {"id": "oljku5j4k", "nome": "Claudio Lanna", "valor": 6545.17, "receita": 778.45, "rent": 11.9, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "zszhcb43s", "nome": "MARCIA COTA", "valor": 4495.06, "receita": 427.66, "rent": 9.5, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "9kp0y1qch", "nome": "Daniele Cristina de Souza", "valor": 2697.25, "receita": 223.45, "rent": 8.3, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "4vg5etdzo", "nome": "LEILIANE FIRMINO MARTINS", "valor": 2777.51, "receita": 388.85, "rent": 14.0, "data": "2026-03-16", "dest": "", "pgto": "Sistema"}, {"id": "prsgwpzrv", "nome": "Jo\u00e3o Paulo Silva de Oliveira", "valor": 4107.51, "receita": 481.99, "rent": 11.7, "data": "2026-03-16", "dest": "", "pgto": "Sistema"}, {"id": "w6cuhh3ly", "nome": "Maria da Concei\u00e7\u00e3o Ferreira de Paula", "valor": 8160.94, "receita": 1187.34, "rent": 14.5, "data": "2026-03-16", "dest": "", "pgto": "Sistema"}, {"id": "7xueybpef", "nome": "Claudia Cota", "valor": 7567.21, "receita": 590.66, "rent": 7.8, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "yvgcslh3c", "nome": "Deivson Evangelista", "valor": 22439.93, "receita": 1814.62, "rent": 8.1, "data": "2026-03-18", "dest": "", "pgto": "Sistema"}, {"id": "2p9m9hxju", "nome": "Maria Amelia Goncalves", "valor": 6393.32, "receita": 585.38, "rent": 9.2, "data": "2026-03-18", "dest": "", "pgto": "Sistema"}, {"id": "2gykwy12b", "nome": "ANDREA ANDRADE", "valor": 8387.02, "receita": 871.86, "rent": 10.4, "data": "2026-03-19", "dest": "", "pgto": "Sistema"}], "Jhulyene Rodrigues": [{"id": "kvh7yvusm", "nome": "LILIAN BARBOSA DIAS", "valor": 1967.98, "receita": 150.47, "rent": 7.6, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}, {"id": "5fm9azn84", "nome": "JANAINA SILVA SANTOS", "valor": 2637.0, "receita": 205.24, "rent": 7.8, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "bny4qd9hv", "nome": "TALITA PEREIRA LOPES", "valor": 5000.0, "receita": 615.19, "rent": 12.3, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "v5j7xzdxs", "nome": "Maria Julia Barbosa Silva", "valor": 3660.0, "receita": 533.65, "rent": 14.6, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "lfe7rke57", "nome": "LETICIA APARECIDA DE PAULA", "valor": 10044.46, "receita": 1694.55, "rent": 16.9, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "9p07s8wma", "nome": "Bruna Martins Nascimento", "valor": 2560.0, "receita": 270.22, "rent": 10.6, "data": "2026-03-07", "dest": "", "pgto": "Sistema"}, {"id": "t5k5102xj", "nome": "Carlos Andre dos Passos Correa", "valor": 3976.18, "receita": 404.3, "rent": 10.2, "data": "2026-03-07", "dest": "", "pgto": "Sistema"}, {"id": "xxe3wa5sq", "nome": "KARINE ARAUJO SOUZA", "valor": 2800.0, "receita": 420.8, "rent": 15.0, "data": "2026-03-11", "dest": "", "pgto": "Sistema"}, {"id": "g5zz61esg", "nome": "OZIMA SIMOES DE SOUZA FERNANDES", "valor": 4000.0, "receita": 485.84, "rent": 12.1, "data": "2026-03-12", "dest": "", "pgto": "Sistema"}, {"id": "mulljkwgg", "nome": "JULIANO BAHIA LANZA", "valor": 3044.0, "receita": 0.0, "rent": 0.0, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "puwdz3boi", "nome": "Marco Tulio da Silva", "valor": 2998.27, "receita": 261.53, "rent": 8.7, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "d51gwdk70", "nome": "JOAO CARLOS PEREIRA CAMPOS", "valor": 3240.52, "receita": 930.35, "rent": 28.7, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "jpuddrsic", "nome": "LUCIANA ALVES FONSECA PEREIRA LANZA", "valor": 1522.0, "receita": 0.0, "rent": 0.0, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "y47ne4xdj", "nome": "Caio Cesar Souza Coelho", "valor": 5895.72, "receita": 394.16, "rent": 6.7, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "q7veseg8q", "nome": "MARCIA CRISTINA DA SILVA DINIZ", "valor": 6952.0, "receita": 824.64, "rent": 11.9, "data": "2026-03-16", "dest": "", "pgto": "Sistema"}, {"id": "60sqxhl9l", "nome": "EVANDRO DINIZ PONTES", "valor": 10740.0, "receita": 2520.84, "rent": 23.5, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "obwwzmuqo", "nome": "Ricardo Alexandre Cunha Fonseca", "valor": 2630.8, "receita": 356.12, "rent": 13.5, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "fmm66xw96", "nome": "DALMIR JERONIMO DE CASTRO", "valor": 8999.28, "receita": 595.86, "rent": 6.6, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "rda6kwx3w", "nome": "BRUNO RIBEIRO DOS SANTOS", "valor": 5806.71, "receita": 972.2, "rent": 16.7, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "hjbfpuaab", "nome": "GRACIELE DE F\u00c1TIMA NASCIMENTO DOS SANTOS", "valor": 7446.95, "receita": 584.32, "rent": 7.8, "data": "2026-03-18", "dest": "", "pgto": "Sistema"}], "Renilson Avelar Barbosa": [{"id": "suh9teaz6", "nome": "S\u00e9rgio Henrique da Silva", "valor": 1925.84, "receita": 266.3, "rent": 13.8, "data": "2026-03-03", "dest": "", "pgto": "Sistema"}], "Ana Beatriz Nogueira Pereira": [{"id": "rytwcc11r", "nome": "Andreza Cristina Correa dos Santos", "valor": 113.4, "receita": 23.4, "rent": 20.6, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "b4k9qi7ut", "nome": "Alex Junio Marques de Freitas", "valor": 658.53, "receita": 328.91, "rent": 49.9, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "n1sx6jhpy", "nome": "JUSSARA MUNIZ CARVALHO", "valor": 0.0, "receita": 0.0, "rent": 9.0, "data": "2026-03-04", "dest": "", "pgto": "Sistema"}, {"id": "5b1fvelyg", "nome": "Poliana ferreira bispo", "valor": 79.5, "receita": 4.5, "rent": 5.7, "data": "2026-03-05", "dest": "", "pgto": "Sistema"}, {"id": "wsyug2c7q", "nome": "LUIS ANTONIO DO AMARAL", "valor": 151.2, "receita": 31.2, "rent": 20.6, "data": "2026-03-11", "dest": "", "pgto": "Sistema"}, {"id": "3pwe898lq", "nome": "FABIANA LIMA", "valor": 189.0, "receita": 39.0, "rent": 20.6, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "ok6a121tb", "nome": "FABRICIO THIAGO DE MOURA OLIVEIRA", "valor": 75.6, "receita": 0.0, "rent": 0.0, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "oa3hcdfyg", "nome": "Rayllissom Marques Amorim Rosa", "valor": 75.6, "receita": 0.0, "rent": 0.0, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "hut89npfh", "nome": "MARLEY LUCIANA RIBEIRO DE OLIVEIRA", "valor": 94.5, "receita": 19.5, "rent": 20.6, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "o9ck2oysi", "nome": "LUANA MARQUES DE OLIVEIRA", "valor": 94.5, "receita": 19.5, "rent": 20.6, "data": "2026-03-13", "dest": "", "pgto": "Sistema"}, {"id": "azk55xtw5", "nome": "Roney De Nazareth Gott", "valor": 37.8, "receita": 7.8, "rent": 20.6, "data": "2026-03-14", "dest": "", "pgto": "Sistema"}, {"id": "kanp0o113", "nome": "Guilherme Pacheco Martins", "valor": 94.5, "receita": 19.5, "rent": 20.6, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "8hsq05kk0", "nome": "BRENDA GABRIELLE DE PAULA TEODORO", "valor": 94.5, "receita": 19.5, "rent": 20.6, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "6giii3o04", "nome": "DENILSON MARQUES DA SILVA", "valor": 302.4, "receita": 62.4, "rent": 20.6, "data": "2026-03-17", "dest": "", "pgto": "Sistema"}, {"id": "wbupgmtw0", "nome": "Aline Campelo Barbosa", "valor": 94.5, "receita": 19.5, "rent": 20.6, "data": "2026-03-18", "dest": "", "pgto": "Sistema"}], "Carla Cecilia Silva Sales": [{"id": "91hz6m41p", "nome": "Jaqueline de Sousa Silva Vieira", "valor": 11914.86, "receita": 1089.16, "rent": 9.1, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "h45ydb11q", "nome": "Paula Ludmyla Silva Vitor", "valor": 3592.55, "receita": 233.7, "rent": 6.5, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "n2g63ga1u", "nome": "Paola Cristina Silva Vitor", "valor": 3592.55, "receita": 233.7, "rent": 6.5, "data": "2026-03-06", "dest": "", "pgto": "Sistema"}, {"id": "ctrdek2gg", "nome": "Wander Luciano de Oliveira", "valor": 2944.65, "receita": 184.29, "rent": 6.3, "data": "2026-03-09", "dest": "", "pgto": "Sistema"}, {"id": "6e860q7u1", "nome": "Marcelo Magalh\u00e3es Valadares", "valor": 4361.35, "receita": 928.05, "rent": 21.3, "data": "2026-03-16", "dest": "", "pgto": "Sistema"}, {"id": "3o4jn23uo", "nome": "Walter Alves Pereira Junior", "valor": 6240.03, "receita": 504.02, "rent": 8.1, "data": "2026-03-18", "dest": "", "pgto": "Sistema"}, {"id": "d4xyjtggf", "nome": "Ana Paula Lopes Trindade", "valor": 3741.44, "receita": 244.85, "rent": 6.5, "data": "2026-03-18", "dest": "", "pgto": "Sistema"}], "Rafael Filipe Moura Oliveira": [{"id": "my4wpwnnh", "nome": "EDGAR CARLOS DA SILVA", "valor": 4416.94, "receita": 314.6, "rent": 7.1, "data": "2026-03-16", "dest": "", "pgto": "Sistema"}]};
-
-function cvmSeedVendasMarco() {
-  var flagKey = 'cvm3_seeded_marco2026_v1';
-  if (localStorage.getItem(flagKey)) return; // ja semeado
-  var mes = 2, ano = 2026; // Marco = mes 2 (0-indexed)
-  var vends = allVendedores || [];
-  var count = 0;
-  // Para cada consultor no seed, encontra o UID pelo nome
-  for (var nomeNorm in CVM_VENDAS_SEED) {
-    var vend = vends.find(function(v) {
-      var vNome = (v.nome || '').trim();
-      // Comparacao case-insensitive, primeiros 8 chars
-      return vNome.toLowerCase().startsWith(nomeNorm.toLowerCase().split(' ')[0].toLowerCase())
-          && vNome.toLowerCase().includes(nomeNorm.split(' ').slice(-1)[0].toLowerCase());
-    });
-    if (!vend) {
-      // Tenta match pelo primeiro nome
-      var primeiroNome = nomeNorm.split(' ')[0].toLowerCase();
-      vend = vends.find(function(v) {
-        return (v.nome || '').toLowerCase().startsWith(primeiroNome);
-      });
-    }
-    if (vend) {
-      var existing = cvmGetVendas(vend.id, mes, ano);
-      if (!existing || existing.length === 0) {
-        cvmSetVendas(vend.id, CVM_VENDAS_SEED[nomeNorm], mes, ano);
-        count++;
-      }
-    }
-  }
-  if (count > 0) {
-    localStorage.setItem(flagKey, '1');
-    console.log('CVM: semeadas vendas de Marco 2026 para ' + count + ' consultores');
-  }
-}
-
-function loadComissoes() {
-  try {
-    cvmSeedVendasMarco();
-    cvmInitMetas();
-  } catch(e) { console.error('cvmInitMetas error:', e); }
-  var c = document.getElementById('comissoes-content');
-  if (!c) { console.error('comissoes-content not found'); return; }
-  var isManager = currentUser && currentUser._isManager;
-  var now = new Date();
-  var mesLabel = CVM_MESES[now.getMonth()] + ' ' + now.getFullYear();
-
-  var tabs = [
-    { id: 'ccvm-meta',    label: 'Minha Meta' },
-    { id: 'ccvm-comissao',label: 'Comissao' },
-    { id: 'ccvm-sim',     label: 'Simulador' },
-    { id: 'ccvm-vendas',  label: 'Minhas Vendas' },
-  ];
-  if (isManager) {
-    tabs.push({ id: 'ccvm-ranking', label: 'Ranking' });
-    tabs.push({ id: 'ccvm-admin',   label: 'Admin' });
-  }
-
-  c.innerHTML = '<div class="ccvm-header"><div class="ccvm-title">Comissoes CVM</div><div class="ccvm-sub">' + mesLabel + '</div></div>'
-    + '<div class="com-cvm-tabs" id="ccvm-tabs">'
-    + tabs.map(function(t, i) {
-        return '<button class="com-cvm-tab' + (i === 0 ? ' active' : '') + '" onclick="cvmShowTab(\'' + t.id + '\',this)">' + t.label + '</button>';
-      }).join('')
-    + '</div>'
-    + tabs.map(function(t, i) {
-        return '<div class="com-cvm-content' + (i === 0 ? ' active' : '') + '" id="' + t.id + '"></div>';
-      }).join('');
-
-  cvmRenderMeta();
-  cvmRenderComissao();
-  cvmRenderSim();
-  cvmRenderVendas();
-  if (isManager) {
-    cvmRenderRanking();
-    cvmRenderAdmin();
-  }
-}
-
-function cvmShowTab(id, btn) {
-  document.querySelectorAll('.com-cvm-tab').forEach(function(t) { t.classList.remove('active'); });
-  document.querySelectorAll('.com-cvm-content').forEach(function(t) { t.classList.remove('active'); });
+function cvmShowTab(id,btn){
+  document.querySelectorAll('.com-cvm-tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.com-cvm-content').forEach(function(t){t.classList.remove('active');});
   btn.classList.add('active');
-  var el = document.getElementById(id);
-  if (el) el.classList.add('active');
+  var el=document.getElementById(id);if(el)el.classList.add('active');
 }
 
-// \u2500\u2500 META \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-function cvmRenderMeta() {
-  var uid = currentUser.id;
-  var meta = cvmGetMeta(uid);
-  var mr = cvmMetaReceita(meta);
-  var vs = cvmVendasMes(uid);
-  var total = cvmTotalV(vs), rec = cvmTotalRec(vs);
-  var pct = meta > 0 ? Math.min(Math.round(total / meta * 100), 100) : 0;
-  var pctRec = mr > 0 ? Math.min(Math.round(rec / mr * 100), 100) : 0;
-  var falta = Math.max(meta - total, 0);
-  var faltaRec = Math.max(mr - rec, 0);
-  var dur = cvmDiasUteisRestantes();
-  var com = cvmCalcComissao(rec, meta);
-  var completo = pct >= 100 && com.bateu;
+// \u2500\u2500 MINHA META \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function cvmRenderMeta(leads) {
+  var uid=currentUser.id;
+  var meta=cvmGetMeta(uid);
+  var mr=cvmMetaReceita(meta);
+  var vl=cvmLeadsVendedor(leads,uid);
+  var total=vl.reduce(function(a,l){return a+(parseFloat(l.valor_estimado)||0);},0);
+  var rec=vl.reduce(function(a,l){return a+cvmLeadReceita(l);},0);
+  var pct=meta>0?Math.min(Math.round(total/meta*100),100):0;
+  var pctRec=mr>0?Math.min(Math.round(rec/mr*100),100):0;
+  var falta=Math.max(meta-total,0);
+  var faltaRec=Math.max(mr-rec,0);
+  var dur=cvmDiasUteisRest();
+  var com=cvmCalcComissao(rec,meta);
+  var completo=pct>=100&&com.bateu;
+  var ringColor=completo?'var(--mint)':pct>=75?'var(--teal)':'var(--orange)';
+  var ringOffset=CVM_CIRC-(CVM_CIRC*Math.min(pct,100)/100);
 
-  var ringColor = completo ? 'var(--mint)' : pct >= 75 ? 'var(--teal)' : 'var(--orange)';
-  var ringOffset = CVM_CIRC - (CVM_CIRC * Math.min(pct, 100) / 100);
-
-  var html = '<div class="kpi-card" style="margin-bottom:14px;">'
-    + '<div class="ccvm-ring-wrap">'
-    + '<svg width="148" height="148" viewBox="0 0 148 148">'
-    + '<circle class="ccvm-ring-bg" cx="74" cy="74" r="65"/>'
-    + '<circle class="ccvm-ring-fill" cx="74" cy="74" r="65" stroke="' + ringColor + '" stroke-dasharray="' + CVM_CIRC + '" stroke-dashoffset="' + ringOffset + '"/>'
-    + '</svg>'
-    + '<div class="ccvm-ring-center"><div class="ccvm-ring-val">' + cvmFmt(total, true) + '</div><div class="ccvm-ring-lbl">volume bruto</div></div>'
-    + '</div>'
-    // Barras duplas
-    + '<div class="ccvm-bar-row"><div class="ccvm-bar-label"><span>Volume Bruto</span><span style="color:' + (pct >= 100 ? 'var(--mint)' : 'var(--orange)') + '">' + cvmFmt(total, true) + ' / ' + cvmFmt(meta, true) + ' (' + pct + '%)</span></div>'
-    + '<div class="ccvm-bar-track"><div class="ccvm-bar-fill" style="width:' + pct + '%;background:' + (pct >= 100 ? 'var(--mint)' : 'var(--orange)') + ';"></div></div></div>'
-    + '<div class="ccvm-bar-row"><div class="ccvm-bar-label"><span>Receita Gerada (min.' + CVM_META_REC_PCT + '%)</span><span style="color:' + (pctRec >= 100 ? 'var(--mint)' : 'var(--red)') + '">' + cvmFmt(rec, true) + ' / ' + cvmFmt(mr, true) + ' (' + pctRec + '%)</span></div>'
-    + '<div class="ccvm-bar-track"><div class="ccvm-bar-fill" style="width:' + pctRec + '%;background:' + (pctRec >= 100 ? 'var(--mint)' : 'var(--red)') + ';"></div></div></div>';
-
+  var html='<div class="kpi-card" style="margin-bottom:14px;">';
+  // Anel
+  html+='<div class="ccvm-ring-wrap"><svg width="148" height="148" viewBox="0 0 148 148">'
+    +'<circle class="ccvm-ring-bg" cx="74" cy="74" r="65"/>'
+    +'<circle class="ccvm-ring-fill" cx="74" cy="74" r="65" stroke="'+ringColor+'" stroke-dasharray="'+CVM_CIRC+'" stroke-dashoffset="'+ringOffset+'"/>'
+    +'</svg><div class="ccvm-ring-center"><div class="ccvm-ring-val">'+cvmFmt(total,true)+'</div><div class="ccvm-ring-lbl">volume bruto</div></div></div>';
+  // Barras duplas
+  html+='<div class="ccvm-bar-row"><div class="ccvm-bar-label"><span>Volume Bruto</span><span style="color:'+(pct>=100?'var(--mint)':'var(--orange)')+'">'+cvmFmt(total,true)+' / '+cvmFmt(meta,true)+' ('+pct+'%)</span></div>'
+    +'<div class="ccvm-bar-track"><div class="ccvm-bar-fill" style="width:'+pct+'%;background:'+(pct>=100?'var(--mint)':'var(--orange)')+'"></div></div></div>';
+  html+='<div class="ccvm-bar-row"><div class="ccvm-bar-label"><span>Receita (min.'+CVM_META_REC_PCT+'%)</span><span style="color:'+(pctRec>=100?'var(--mint)':'var(--red)')+'">'+cvmFmt(rec,true)+' / '+cvmFmt(mr,true)+' ('+pctRec+'%)</span></div>'
+    +'<div class="ccvm-bar-track"><div class="ccvm-bar-fill" style="width:'+pctRec+'%;background:'+(pctRec>=100?'var(--mint)':'var(--red)')+'"></div></div></div>';
   // Alertas
-  if (completo) {
-    html += '<div class="ccvm-alert-ok">Meta completa! Volume e receita minima atingidos.</div>';
-  } else if (pct >= 100 && !com.bateu) {
-    html += '<div class="ccvm-alert-warn">Volume batido! Mas receita minima de ' + cvmFmt(mr) + ' ainda nao atingida. Comissao no nivel base (5%) ate la.</div>';
-  }
-
+  if(completo)html+='<div class="ccvm-alert-ok">Meta completa! Volume e receita minima atingidos.</div>';
+  else if(pct>=100&&!com.bateu)html+='<div class="ccvm-alert-warn">Volume batido! Receita minima de '+cvmFmt(mr)+' ainda nao atingida. Comissao no nivel base (5%).</div>';
+  if(meta===0)html+='<div class="ccvm-alert-warn">Meta nao definida para este mes. Solicite ao gestor.</div>';
   // Stats
-  html += '<div class="ccvm-stats">'
-    + '<div class="ccvm-stat"><div class="ccvm-stat-lbl">Vendas</div><div class="ccvm-stat-val" style="color:var(--teal)">' + vs.length + '</div></div>'
-    + '<div class="ccvm-stat"><div class="ccvm-stat-lbl">Nivel Atual</div><div class="ccvm-stat-val" style="color:' + com.nivel.cor + ';font-size:13px">' + com.nivel.label + '</div></div>'
-    + '<div class="ccvm-stat"><div class="ccvm-stat-lbl">No Bolso</div><div class="ccvm-stat-val" style="color:var(--mint)">' + cvmFmt(com.bolso, true) + '</div></div>'
-    + '</div></div>'; // fecha kpi-card
-
+  html+='<div class="ccvm-stats"><div class="ccvm-stat"><div class="ccvm-stat-lbl">Vendas</div><div class="ccvm-stat-val" style="color:var(--teal)">'+vl.length+'</div></div>'
+    +'<div class="ccvm-stat"><div class="ccvm-stat-lbl">Nivel Atual</div><div class="ccvm-stat-val" style="color:'+com.nivel.cor+';font-size:13px">'+com.nivel.label+'</div></div>'
+    +'<div class="ccvm-stat"><div class="ccvm-stat-lbl">No Bolso</div><div class="ccvm-stat-val" style="color:var(--mint)">'+cvmFmt(com.bolso,true)+'</div></div></div></div>';
   // Ritmo
-  html += '<div class="ccvm-ritmo"><div class="ccvm-ritmo-title">O que preciso fazer</div>'
-    + '<div class="ccvm-ritmo-row"><div class="ccvm-ritmo-lbl">Falta de volume bruto</div><div class="ccvm-ritmo-val" style="color:var(--orange)">' + (falta > 0 ? cvmFmt(falta) : 'Batido!') + '</div></div>'
-    + '<div class="ccvm-ritmo-row"><div class="ccvm-ritmo-lbl">Falta de receita (meta ' + CVM_META_REC_PCT + '%)</div><div class="ccvm-ritmo-val" style="color:' + (faltaRec > 0 ? 'var(--red)' : 'var(--mint)') + '">' + (faltaRec > 0 ? cvmFmt(faltaRec) : 'Batida!') + '</div></div>'
-    + '<div class="ccvm-ritmo-row"><div class="ccvm-ritmo-lbl">Vender por dia util restante</div><div class="ccvm-ritmo-val" style="color:var(--teal)">' + (falta > 0 ? cvmFmt(falta / dur, true) : 'OK!') + '</div></div>'
-    + '<div class="ccvm-ritmo-row"><div class="ccvm-ritmo-lbl">Dias uteis restantes</div><div class="ccvm-ritmo-val" style="color:var(--navy)">' + dur + ' dias</div></div>'
-    + '</div>';
-
-  html += '<div style="margin-top:16px;"><button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="cvmOpenVenda()">+ Lancar Nova Venda</button></div>';
-
-  document.getElementById('ccvm-meta').innerHTML = html;
+  html+='<div class="ccvm-ritmo"><div class="ccvm-ritmo-title">O que preciso fazer</div>'
+    +'<div class="ccvm-ritmo-row"><div class="ccvm-ritmo-lbl">Falta de volume bruto</div><div class="ccvm-ritmo-val" style="color:var(--orange)">'+( falta>0?cvmFmt(falta):'Batido!')+'</div></div>'
+    +'<div class="ccvm-ritmo-row"><div class="ccvm-ritmo-lbl">Falta de receita</div><div class="ccvm-ritmo-val" style="color:'+(faltaRec>0?'var(--red)':'var(--mint)')+'">'+( faltaRec>0?cvmFmt(faltaRec):'Batida!')+'</div></div>'
+    +'<div class="ccvm-ritmo-row"><div class="ccvm-ritmo-lbl">Vender por dia util restante</div><div class="ccvm-ritmo-val" style="color:var(--teal)">'+( falta>0?cvmFmt(falta/dur,true):'OK!')+'</div></div>'
+    +'<div class="ccvm-ritmo-row"><div class="ccvm-ritmo-lbl">Dias uteis restantes</div><div class="ccvm-ritmo-val" style="color:var(--navy)">'+dur+' dias</div></div></div>';
+  document.getElementById('ccvm-meta').innerHTML=html;
 }
 
-// \u2500\u2500 COMISSAO \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-function cvmRenderComissao() {
-  var uid = currentUser.id;
-  var meta = cvmGetMeta(uid);
-  var mr = cvmMetaReceita(meta);
-  var vs = cvmVendasMes(uid);
-  var total = cvmTotalV(vs), rec = cvmTotalRec(vs);
-  var com = cvmCalcComissao(rec, meta);
-  var pctBruto = meta > 0 ? Math.round(total / meta * 100) : 0;
-
-  var niveisRows = CVM_NIVEIS.map(function(n) {
-    var isAtivo = n.id === com.nivel.id;
-    return '<tr class="' + (isAtivo ? 'nivel-ativo' : '') + '">'
-      + '<td><span class="ccvm-nivel-tag" style="background:' + n.cor + '22;color:' + n.cor + '">' + n.label + '</span></td>'
-      + '<td style="color:var(--muted);font-size:11px;">' + (n.min === 0 ? 'Receita < meta receita' : n.min + '%' + (n.max < 999 ? '\u2013' + n.max + '%' : '+') + ' da meta receita') + '</td>'
-      + '<td style="font-family:\'DM Mono\',monospace;font-weight:800;color:' + n.cor + '">' + n.pct + '%</td>'
-      + '<td style="color:var(--mint);font-size:11px;font-weight:700;">' + (isAtivo ? 'voce' : '') + '</td>'
-      + '</tr>';
+// \u2500\u2500 COMISSAO \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function cvmRenderComissao(leads) {
+  var uid=currentUser.id;
+  var meta=cvmGetMeta(uid);
+  var mr=cvmMetaReceita(meta);
+  var vl=cvmLeadsVendedor(leads,uid);
+  var total=vl.reduce(function(a,l){return a+(parseFloat(l.valor_estimado)||0);},0);
+  var rec=vl.reduce(function(a,l){return a+cvmLeadReceita(l);},0);
+  var com=cvmCalcComissao(rec,meta);
+  var pctBruto=meta>0?Math.round(total/meta*100):0;
+  var niveisRows=CVM_NIVEIS.map(function(n){
+    var isAtivo=n.id===com.nivel.id;
+    return'<tr class="'+(isAtivo?'nivel-ativo':'')+'"><td><span class="ccvm-nivel-tag" style="background:'+n.cor+'22;color:'+n.cor+'">'+n.label+'</span></td>'
+      +'<td style="color:var(--muted);font-size:11px;">'+(n.min===0?'Receita < meta receita':n.min+'%'+(n.max<999?'\u2013'+n.max+'%':'+')+' da meta receita')+'</td>'
+      +'<td style="font-family:DM Mono,monospace;font-weight:800;color:'+n.cor+'">'+n.pct+'%</td>'
+      +'<td style="color:var(--mint);font-size:11px;font-weight:700;">'+(isAtivo?'voce':'')+'</td></tr>';
   }).join('');
-
-  var html = '<div class="kpi-card" style="margin-bottom:14px;">'
-    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
-    + '<div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Voce ganha no bolso</div>'
-    + '<div style="font-family:\'Syne\',sans-serif;font-size:34px;font-weight:800;color:' + com.nivel.cor + ';">' + cvmFmt(com.bolso) + '</div></div>'
-    + '<div style="text-align:right;"><div style="font-family:\'Syne\',sans-serif;font-size:28px;font-weight:800;color:' + com.nivel.cor + '">' + com.nivel.pct + '%</div>'
-    + '<div style="font-size:11px;color:var(--muted);">sobre receita</div></div></div>'
-    + '<div class="ccvm-stats" style="margin-top:0;">'
-    + '<div class="ccvm-stat"><div class="ccvm-stat-lbl">Volume Bruto</div><div class="ccvm-stat-val" style="font-size:14px;">' + cvmFmt(total, true) + '</div></div>'
-    + '<div class="ccvm-stat"><div class="ccvm-stat-lbl">Receita Gerada</div><div class="ccvm-stat-val" style="font-size:14px;color:var(--teal);">' + cvmFmt(rec, true) + '</div></div>'
-    + '<div class="ccvm-stat"><div class="ccvm-stat-lbl">% Meta Receita</div><div class="ccvm-stat-val" style="color:' + com.nivel.cor + '">' + com.pctRec + '%</div></div>'
-    + '</div>';
-
-  if (!com.bateu) {
-    html += '<div class="ccvm-alert-danger" style="margin-top:12px;">Receita abaixo da meta minima de ' + cvmFmt(mr) + '. Comissao no nivel base (5%).</div>';
-  }
-  if (com.nivel.bonus > 0) {
-    html += '<div class="ccvm-alert-ok" style="margin-top:8px;">Bonus +' + com.nivel.bonus + '% retroativo sobre toda a receita do mes!</div>';
-  }
-  html += '</div>';
-
-  // Tabela de niveis
-  html += '<div class="dash-card" style="margin-bottom:14px;">'
-    + '<div class="dash-card-title">Tabela de Niveis</div>'
-    + '<div style="overflow:auto;"><table class="ccvm-niveis"><thead><tr><th>Nivel</th><th>Faixa</th><th>% Comissao</th><th></th></tr></thead><tbody>' + niveisRows + '</tbody></table></div>'
-    + '<div style="margin-top:12px;background:var(--bg);border-radius:9px;padding:11px 13px;font-size:11px;color:var(--muted);line-height:1.8;">'
-    + '<strong style="color:var(--navy);display:block;margin-bottom:3px">Regra de calculo:</strong>'
-    + '1. Meta de receita = ' + CVM_META_REC_PCT + '% da meta bruta (' + cvmFmt(mr, true) + ' este mes)<br>'
-    + '2. Se receita &lt; meta de receita: nivel base (5%), mesmo com volume batido<br>'
-    + '3. Bonus escalonado sobre % da meta de receita atingida<br>'
-    + '4. Bonus aplicado retroativamente sobre toda a receita do mes'
-    + '</div></div>';
-
-  document.getElementById('ccvm-comissao').innerHTML = html;
+  var html='<div class="kpi-card" style="margin-bottom:14px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
+    +'<div><div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Voce ganha no bolso</div>'
+    +'<div style="font-family:Syne,sans-serif;font-size:34px;font-weight:800;color:'+com.nivel.cor+'">'+cvmFmt(com.bolso)+'</div></div>'
+    +'<div style="text-align:right;"><div style="font-family:Syne,sans-serif;font-size:28px;font-weight:800;color:'+com.nivel.cor+'">'+com.nivel.pct+'%</div>'
+    +'<div style="font-size:11px;color:var(--muted);">sobre receita</div></div></div>'
+    +'<div class="ccvm-stats" style="margin-top:0;">'
+    +'<div class="ccvm-stat"><div class="ccvm-stat-lbl">Volume Bruto</div><div class="ccvm-stat-val" style="font-size:13px;">'+cvmFmt(total,true)+'</div></div>'
+    +'<div class="ccvm-stat"><div class="ccvm-stat-lbl">Receita Gerada</div><div class="ccvm-stat-val" style="font-size:13px;color:var(--teal);">'+cvmFmt(rec,true)+'</div></div>'
+    +'<div class="ccvm-stat"><div class="ccvm-stat-lbl">% Meta Receita</div><div class="ccvm-stat-val" style="color:'+com.nivel.cor+'">'+com.pctRec+'%</div></div></div>';
+  if(!com.bateu)html+='<div class="ccvm-alert-danger" style="margin-top:10px;">Receita abaixo da meta minima de '+cvmFmt(mr)+'. Comissao no nivel base (5%).</div>';
+  if(com.nivel.bonus>0)html+='<div class="ccvm-alert-ok" style="margin-top:8px;">Bonus +'+com.nivel.bonus+'% retroativo sobre toda a receita!</div>';
+  html+='</div>';
+  html+='<div class="dash-card" style="margin-bottom:14px;"><div class="dash-card-title">Tabela de Niveis</div>'
+    +'<div style="overflow:auto;"><table class="ccvm-niveis"><thead><tr><th>Nivel</th><th>Faixa</th><th>% Comissao</th><th></th></tr></thead><tbody>'+niveisRows+'</tbody></table></div>'
+    +'<div style="margin-top:10px;background:var(--bg);border-radius:8px;padding:10px 13px;font-size:11px;color:var(--muted);line-height:1.8;">'
+    +'<strong style="color:var(--navy);display:block;margin-bottom:3px">Regra de calculo:</strong>'
+    +'1. Meta receita = '+CVM_META_REC_PCT+'% da meta bruta ('+cvmFmt(mr,true)+' este mes)<br>'
+    +'2. Receita &lt; meta receita = nivel base 5%, mesmo com volume batido<br>'
+    +'3. Bonus aplicado retroativamente sobre toda a receita do mes'
+    +'</div></div>';
+  document.getElementById('ccvm-comissao').innerHTML=html;
 }
 
-// \u2500\u2500 SIMULADOR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-function cvmRenderSim() {
-  var uid = currentUser.id;
-  var meta = cvmGetMeta(uid) || 100000;
-  var html = '<div class="ccvm-sim-card">'
-    + '<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;">Simulador \u2014 Quanto vou ganhar?</div>'
-    + '<div class="ccvm-sim-row"><div class="ccvm-sim-row-hd"><div class="ccvm-sim-row-lbl">Volume bruto de vendas</div><div class="ccvm-sim-row-val" id="cvsim-vol-val">' + cvmFmt(meta, true) + '</div></div>'
-    + '<input type="range" class="ccvm-sim-range" id="cvsim-vol" min="0" max="' + Math.max(meta * 3, 300000) + '" value="' + meta + '" step="5000" oninput="cvmUpdateSim()">'
-    + '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;"><span>R$ 0</span><span>' + cvmFmt(meta, true) + ' (meta)</span><span>' + cvmFmt(Math.max(meta * 3, 300000), true) + '</span></div></div>'
-    + '<div class="ccvm-sim-row"><div class="ccvm-sim-row-hd"><div class="ccvm-sim-row-lbl">Rentabilidade media</div><div class="ccvm-sim-row-val" id="cvsim-rent-val">9%</div></div>'
-    + '<input type="range" class="ccvm-sim-range" id="cvsim-rent" min="8" max="14" value="9" step="0.5" oninput="cvmUpdateSim()">'
-    + '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;"><span>8% (min)</span><span>11%</span><span>14% (max)</span></div></div>'
-    + '<div class="ccvm-sim-result" id="cvsim-result"></div></div>'
-    // Tabela quanto preciso vender
-    + '<div class="ccvm-sim-card">'
-    + '<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Quanto preciso vender para cada nivel?</div>'
-    + CVM_NIVEIS.map(function(n) {
-        var volNec = n.min > 0 ? meta * (n.min / 100) : 0;
-        var recEst = volNec * 0.09;
-        var bolsoEst = recEst * (n.pct / 100);
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);">'
-          + '<div><span class="ccvm-nivel-tag" style="background:' + n.cor + '22;color:' + n.cor + ';margin-right:6px">' + n.label + '</span>'
-          + '<div style="font-size:10px;color:var(--muted);margin-top:3px;">' + (n.min > 0 ? 'Vender ' + cvmFmt(volNec, true) + ' (a 9% rent.)' : 'Abaixo da meta') + '</div></div>'
-          + '<div style="text-align:right;"><div style="font-family:\'Syne\',sans-serif;font-size:16px;font-weight:800;color:' + n.cor + '">' + cvmFmt(bolsoEst, true) + '</div>'
-          + '<div style="font-size:10px;color:var(--muted);">' + n.pct + '% comissao</div></div></div>';
-      }).join('')
-    + '<div style="font-size:10px;color:var(--muted);margin-top:8px;">* Simulacao com rentabilidade media de 9%</div>'
-    + '</div>';
-
-  document.getElementById('ccvm-sim').innerHTML = html;
+// \u2500\u2500 SIMULADOR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function cvmRenderSim(leads) {
+  var uid=currentUser.id;
+  var meta=cvmGetMeta(uid)||100000;
+  var html='<div class="ccvm-sim-card">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;">Simulador \u2014 Quanto vou ganhar?</div>'
+    +'<div class="ccvm-sim-row"><div class="ccvm-sim-row-hd"><div class="ccvm-sim-row-lbl">Volume bruto de vendas</div><div class="ccvm-sim-row-val" id="cvsim-vol-val">'+cvmFmt(meta,true)+'</div></div>'
+    +'<input type="range" class="ccvm-sim-range" id="cvsim-vol" min="0" max="'+Math.max(meta*3,300000)+'" value="'+meta+'" step="5000" oninput="cvmUpdateSim()">'
+    +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;"><span>R$ 0</span><span>'+cvmFmt(meta,true)+' (meta)</span><span>'+cvmFmt(Math.max(meta*3,300000),true)+'</span></div></div>'
+    +'<div class="ccvm-sim-row"><div class="ccvm-sim-row-hd"><div class="ccvm-sim-row-lbl">Rentabilidade media</div><div class="ccvm-sim-row-val" id="cvsim-rent-val">9%</div></div>'
+    +'<input type="range" class="ccvm-sim-range" id="cvsim-rent" min="8" max="14" value="9" step="0.5" oninput="cvmUpdateSim()">'
+    +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;"><span>8% (min)</span><span>11%</span><span>14% (max)</span></div></div>'
+    +'<div class="ccvm-sim-result" id="cvsim-result"></div></div>'
+    +'<div class="ccvm-sim-card"><div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Quanto preciso vender para cada nivel?</div>'
+    +CVM_NIVEIS.map(function(n){
+      var volNec=n.min>0?meta*(n.min/100):0;
+      var bolsoEst=volNec*0.09*(n.pct/100);
+      return'<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);">'
+        +'<div><span class="ccvm-nivel-tag" style="background:'+n.cor+'22;color:'+n.cor+';margin-right:6px">'+n.label+'</span>'
+        +'<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+(n.min>0?'Vender '+cvmFmt(volNec,true)+' (a 9% rent.)':'Abaixo da meta')+'</div></div>'
+        +'<div style="text-align:right;"><div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:'+n.cor+'">'+cvmFmt(bolsoEst,true)+'</div>'
+        +'<div style="font-size:10px;color:var(--muted);">'+n.pct+'% comissao</div></div></div>';
+    }).join('')+'<div style="font-size:10px;color:var(--muted);margin-top:8px;">* Simulacao com rentabilidade media de 9%</div></div>';
+  document.getElementById('ccvm-sim').innerHTML=html;
   cvmUpdateSim();
 }
-
-function cvmUpdateSim() {
-  var meta = cvmGetMeta(currentUser.id) || 1;
-  var mr = cvmMetaReceita(meta);
-  var el_vol = document.getElementById('cvsim-vol');
-  var el_rent = document.getElementById('cvsim-rent');
-  if (!el_vol || !el_rent) return;
-  var vol = parseFloat(el_vol.value) || 0;
-  var rent = parseFloat(el_rent.value) || 9;
-  document.getElementById('cvsim-vol-val').textContent = cvmFmt(vol, true);
-  document.getElementById('cvsim-rent-val').textContent = rent + '%';
-  var r = cvmCalcSim(vol, rent, meta);
-  var proxNivel = null;
-  for (var i = 0; i < CVM_NIVEIS.length; i++) {
-    if (CVM_NIVEIS[i].min > r.pctRec && CVM_NIVEIS[i].min > 0) { proxNivel = CVM_NIVEIS[i]; break; }
-  }
-  var faltaProx = proxNivel ? Math.max(mr * (proxNivel.min / 100) - r.receita, 0) : 0;
-  var html = '<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Volume bruto</div><div class="ccvm-sim-res-val">' + cvmFmt(vol) + ' (' + r.pctBruto + '% meta)</div></div>'
-    + '<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Receita gerada (' + rent + '%)</div><div class="ccvm-sim-res-val" style="color:var(--teal)">' + cvmFmt(r.receita) + '</div></div>'
-    + '<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Meta de receita (' + CVM_META_REC_PCT + '%)</div><div class="ccvm-sim-res-val" style="color:var(--orange)">' + cvmFmt(mr) + '</div></div>'
-    + '<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">% meta receita atingida</div><div class="ccvm-sim-res-val" style="color:' + r.nivel.cor + '">' + r.pctRec + '%</div></div>'
-    + '<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Nivel</div><div class="ccvm-sim-res-val" style="color:' + r.nivel.cor + '">' + r.nivel.label + '</div></div>'
-    + (!r.bateu ? '<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl" style="color:var(--red)">Falta receita para meta minima</div><div class="ccvm-sim-res-val" style="color:var(--red)">' + cvmFmt(r.faltaRec) + '</div></div>' : '')
-    + (r.faltaVol > 0 ? '<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Falta de volume bruto</div><div class="ccvm-sim-res-val" style="color:var(--orange)">' + cvmFmt(r.faltaVol) + '</div></div>' : '')
-    + (proxNivel && r.bateu ? '<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Falta receita p/ ' + proxNivel.label + '</div><div class="ccvm-sim-res-val" style="color:var(--teal)">' + cvmFmt(faltaProx) + '</div></div>' : '')
-    + '<div class="ccvm-sim-res-row destaque"><div class="ccvm-sim-res-lbl">No seu bolso</div><div class="ccvm-sim-res-val">' + cvmFmt(r.bolso) + '</div></div>';
-  document.getElementById('cvsim-result').innerHTML = html;
+function cvmUpdateSim(){
+  var meta=cvmGetMeta(currentUser.id)||1;
+  var mr=cvmMetaReceita(meta);
+  var el_vol=document.getElementById('cvsim-vol');
+  var el_rent=document.getElementById('cvsim-rent');
+  if(!el_vol||!el_rent)return;
+  var vol=parseFloat(el_vol.value)||0;
+  var rent=parseFloat(el_rent.value)||9;
+  document.getElementById('cvsim-vol-val').textContent=cvmFmt(vol,true);
+  document.getElementById('cvsim-rent-val').textContent=rent+'%';
+  var r=cvmCalcSim(vol,rent,meta);
+  var proxNivel=null;
+  for(var i=0;i<CVM_NIVEIS.length;i++){if(CVM_NIVEIS[i].min>r.pctRec&&CVM_NIVEIS[i].min>0){proxNivel=CVM_NIVEIS[i];break;}}
+  var faltaProx=proxNivel?Math.max(mr*(proxNivel.min/100)-r.receita,0):0;
+  document.getElementById('cvsim-result').innerHTML='<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Volume bruto</div><div class="ccvm-sim-res-val">'+cvmFmt(vol)+' ('+r.pctBruto+'% meta)</div></div>'
+    +'<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Receita gerada ('+rent+'%)</div><div class="ccvm-sim-res-val" style="color:var(--teal)">'+cvmFmt(r.receita)+'</div></div>'
+    +'<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Meta de receita</div><div class="ccvm-sim-res-val" style="color:var(--orange)">'+cvmFmt(mr)+'</div></div>'
+    +'<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">% meta receita</div><div class="ccvm-sim-res-val" style="color:'+r.nivel.cor+'">'+r.pctRec+'%</div></div>'
+    +'<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Nivel</div><div class="ccvm-sim-res-val" style="color:'+r.nivel.cor+'">'+r.nivel.label+'</div></div>'
+    +(!r.bateu?'<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl" style="color:var(--red)">Falta receita para meta minima</div><div class="ccvm-sim-res-val" style="color:var(--red)">'+cvmFmt(r.faltaRec)+'</div></div>':'')
+    +(r.faltaVol>0?'<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Falta volume bruto</div><div class="ccvm-sim-res-val" style="color:var(--orange)">'+cvmFmt(r.faltaVol)+'</div></div>':'')
+    +(proxNivel&&r.bateu?'<div class="ccvm-sim-res-row"><div class="ccvm-sim-res-lbl">Falta p/ '+proxNivel.label+'</div><div class="ccvm-sim-res-val" style="color:var(--teal)">'+cvmFmt(faltaProx)+'</div></div>':'')
+    +'<div class="ccvm-sim-res-row destaque"><div class="ccvm-sim-res-lbl">No seu bolso</div><div class="ccvm-sim-res-val">'+cvmFmt(r.bolso)+'</div></div>';
 }
 
-// \u2500\u2500 VENDAS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-function cvmRenderVendas() {
-  var uid = currentUser.id;
-  var now = new Date();
-  var vs = cvmVendasMes(uid).sort(function(a, b) { return new Date(b.data) - new Date(a.data); });
-  var total = cvmTotalV(vs), rec = cvmTotalRec(vs);
-  var html = '<div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">'
-    + '<div style="font-size:13px;font-weight:700;color:var(--navy);">' + vs.length + ' venda(s) \u2014 ' + CVM_MESES[now.getMonth()] + '</div>'
-    + '<div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;color:var(--navy);">' + cvmFmt(total, true) + '</div></div>';
-
-  if (vs.length === 0) {
-    html += '<div style="background:var(--surface);border:1.5px dashed var(--border);border-radius:10px;padding:28px;text-align:center;color:var(--muted);font-size:13px;">Nenhuma venda lancada este mes. Clique no botao abaixo para comecar!</div>';
-  } else {
-    vs.forEach(function(v) {
-      var dt = new Date(v.data + 'T12:00:00').toLocaleDateString('pt-BR');
-      html += '<div class="ccvm-venda-item">'
-        + '<div><div class="ccvm-vi-name">' + v.nome + '</div><div class="ccvm-vi-meta">' + (v.dest || '\u2014') + ' \u00b7 ' + dt + ' \u00b7 ' + v.pgto + '</div></div>'
-        + '<div style="display:flex;align-items:center;gap:6px;">'
-        + '<div><div class="ccvm-vi-val">' + cvmFmt(v.valor) + '</div><div class="ccvm-vi-rec">rec: ' + cvmFmt(v.receita) + ' (' + v.rent + '%)</div></div>'
-        + '<button class="ccvm-vi-del" onclick="cvmDelVenda(\'' + v.id + '\')">&#215;</button>'
-        + '</div></div>';
-    });
-  }
-
-  html += '<div style="margin-top:10px;background:var(--bg);border-radius:9px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;font-size:12px;">'
-    + '<div style="color:var(--muted);">Receita gerada no mes</div>'
-    + '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:800;color:var(--teal);">' + cvmFmt(rec) + '</div></div>';
-
-  html += '<div style="margin-top:14px;"><button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="cvmOpenVenda()">+ Lancar Nova Venda</button></div>';
-  document.getElementById('ccvm-vendas').innerHTML = html;
-}
-
-function cvmDelVenda(id) {
-  if (!confirm('Remover esta venda?')) return;
-  var now = new Date();
-  for (var m = 0; m < 12; m++) {
-    for (var a = now.getFullYear() - 1; a <= now.getFullYear() + 1; a++) {
-      var vs = cvmGetVendas(currentUser.id, m, a);
-      var f = vs.filter(function(v) { return v.id !== id; });
-      if (f.length !== vs.length) cvmSetVendas(currentUser.id, f, m, a);
-    }
-  }
-  cvmRenderVendas();
-  cvmRenderMeta();
-  cvmRenderComissao();
-}
-
-// \u2500\u2500 RANKING \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-function cvmRenderRanking() {
-  var vends = (allVendedores || []).filter(function(v) { return v.status === 'ativo' || !v.status; });
-  var now = new Date();
-  var mes = now.getMonth(), ano = now.getFullYear();
-
-  var ranked = vends.map(function(v) {
-    var vs = cvmGetVendas(v.id, mes, ano).filter(function(x) {
-      var d = new Date(x.data + 'T12:00:00');
-      return d.getMonth() === mes && d.getFullYear() === ano;
-    });
-    var total = cvmTotalV(vs), rec = cvmTotalRec(vs);
-    var meta = cvmGetMeta(v.id);
-    var com = cvmCalcComissao(rec, meta);
-    var pct = meta > 0 ? Math.min(Math.round(total / meta * 100), 100) : 0;
-    return { id: v.id, nome: v.nome, loja: v.loja, total: total, rec: rec, meta: meta, com: com, pct: pct, qtd: vs.length };
-  }).sort(function(a, b) { return b.total - a.total; });
-
-  var maxT = Math.max.apply(null, ranked.map(function(r) { return r.total; }).concat([1]));
-  var tTotal = ranked.reduce(function(a, r) { return a + r.total; }, 0);
-  var tRec = ranked.reduce(function(a, r) { return a + r.rec; }, 0);
-  var tBolso = ranked.reduce(function(a, r) { return a + r.com.bolso; }, 0);
-
-  var html = '<div class="kpi-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">'
-    + '<div class="kpi-card green"><div class="kpi-val" style="font-size:20px;">' + cvmFmt(tTotal, true) + '</div><div class="kpi-label">Volume Total</div></div>'
-    + '<div class="kpi-card"><div class="kpi-val" style="font-size:20px;color:var(--teal);">' + cvmFmt(tRec, true) + '</div><div class="kpi-label">Receita Total</div></div>'
-    + '<div class="kpi-card"><div class="kpi-val" style="font-size:20px;color:#8B5CF6;">' + cvmFmt(tBolso, true) + '</div><div class="kpi-label">Est. Comissoes</div></div>'
-    + '</div>';
-
-  ranked.forEach(function(r, i) {
-    var medal = i === 0 ? '&#127945;' : i === 1 ? '&#129352;' : i === 2 ? '&#129353;' : (i + 1) + '\u00ba';
-    var posColor = i === 0 ? '#F9C74F' : i === 1 ? '#9E9E9E' : i === 2 ? '#CD7F32' : 'var(--muted)';
-    var isMe = currentUser && r.id === currentUser.id;
-    html += '<div class="ccvm-rank-item" style="' + (isMe ? 'border-color:var(--teal);background:rgba(2,128,144,.04);' : '') + '">'
-      + '<div class="ccvm-rank-pos" style="color:' + posColor + '">' + medal + '</div>'
-      + '<div class="ccvm-rank-info">'
-      + '<div class="ccvm-rank-name">' + r.nome + (isMe ? ' <span style="font-size:10px;color:var(--teal);">(voce)</span>' : '') + '</div>'
-      + '<div style="font-size:10px;color:var(--muted);">' + (r.loja || '') + ' \u00b7 ' + r.pct + '% da meta</div>'
-      + '<div class="ccvm-rank-bar-bg"><div class="ccvm-rank-bar-fill" style="width:' + Math.round(r.total / maxT * 100) + '%;"></div></div>'
-      + '</div>'
-      + '<div class="ccvm-rank-val">'
-      + '<div class="ccvm-rank-total">' + cvmFmt(r.total, true) + '</div>'
-      + '<div class="ccvm-rank-com">' + cvmFmt(r.com.bolso, true) + ' comissao</div>'
-      + '<div style="font-size:9px;color:var(--muted);">' + r.qtd + ' venda(s)</div>'
-      + '</div></div>';
+// \u2500\u2500 RANKING (gestor) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function cvmRenderRanking(leads) {
+  var vends=(allVendedores||[]).filter(function(v){return v.status==='ativo'||!v.status;});
+  var ranked=vends.map(function(v){
+    var vl=cvmLeadsVendedor(leads,v.id);
+    var total=vl.reduce(function(a,l){return a+(parseFloat(l.valor_estimado)||0);},0);
+    var rec=vl.reduce(function(a,l){return a+cvmLeadReceita(l);},0);
+    var meta=cvmGetMeta(v.id);
+    var com=cvmCalcComissao(rec,meta);
+    var pct=meta>0?Math.min(Math.round(total/meta*100),100):0;
+    return{id:v.id,nome:v.nome,loja:v.loja,total:total,rec:rec,meta:meta,com:com,pct:pct,qtd:vl.length};
+  }).sort(function(a,b){return b.total-a.total;});
+  var maxT=Math.max.apply(null,ranked.map(function(r){return r.total;}).concat([1]));
+  var tTotal=ranked.reduce(function(a,r){return a+r.total;},0);
+  var tRec=ranked.reduce(function(a,r){return a+r.rec;},0);
+  var tBolso=ranked.reduce(function(a,r){return a+r.com.bolso;},0);
+  var html='<div class="kpi-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">'
+    +'<div class="kpi-card green"><div class="kpi-val" style="font-size:20px;">'+cvmFmt(tTotal,true)+'</div><div class="kpi-label">Volume Total</div></div>'
+    +'<div class="kpi-card"><div class="kpi-val" style="font-size:20px;color:var(--teal);">'+cvmFmt(tRec,true)+'</div><div class="kpi-label">Receita Total</div></div>'
+    +'<div class="kpi-card"><div class="kpi-val" style="font-size:20px;color:#8B5CF6;">'+cvmFmt(tBolso,true)+'</div><div class="kpi-label">Est. Comissoes</div></div></div>';
+  ranked.forEach(function(r,i){
+    var medal=i===0?'&#127945;':i===1?'&#129352;':i===2?'&#129353;':(i+1)+'&#186;';
+    var posColor=i===0?'#F9C74F':i===1?'#9E9E9E':i===2?'#CD7F32':'var(--muted)';
+    var isMe=currentUser&&r.id===currentUser.id;
+    html+='<div class="ccvm-rank-item" style="'+(isMe?'border-color:var(--teal);background:rgba(2,128,144,.04);':'')+'">'
+      +'<div class="ccvm-rank-pos" style="color:'+posColor+'">'+medal+'</div>'
+      +'<div class="ccvm-rank-info"><div class="ccvm-rank-name">'+r.nome+(isMe?' <span style="font-size:10px;color:var(--teal);">(voce)</span>':'')+'</div>'
+      +'<div style="font-size:10px;color:var(--muted);">'+(r.loja||'')+' \u00B7 '+r.pct+'% da meta</div>'
+      +'<div class="ccvm-rank-bar-bg"><div class="ccvm-rank-bar-fill" style="width:'+Math.round(r.total/maxT*100)+'%;"></div></div></div>'
+      +'<div class="ccvm-rank-val"><div class="ccvm-rank-total">'+cvmFmt(r.total,true)+'</div>'
+      +'<div class="ccvm-rank-com">'+cvmFmt(r.com.bolso,true)+' comissao</div>'
+      +'<div style="font-size:9px;color:var(--muted);">'+r.qtd+' venda(s)</div></div></div>';
   });
-
-  document.getElementById('ccvm-ranking').innerHTML = html;
+  document.getElementById('ccvm-ranking').innerHTML=html;
 }
 
-// \u2500\u2500 ADMIN \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-function cvmRenderAdmin() {
-  var vends = (allVendedores || []).filter(function(v) { return v.status === 'ativo' || !v.status; });
-  var now = new Date();
-
-  var html = '<div style="font-family:\'Syne\',sans-serif;font-size:18px;font-weight:800;color:var(--navy);margin-bottom:16px;">Gestao de Metas \u2014 Comissoes</div>'
-    + '<div class="ccvm-alert-warn" style="margin-bottom:16px;">As metas aqui sao especificas para o calculo de comissao. Separe da meta de leads do funil.</div>';
-
-  vends.forEach(function(v) {
-    var meta = cvmGetMeta(v.id);
-    var mr = cvmMetaReceita(meta);
-    var vs = cvmGetVendas(v.id, now.getMonth(), now.getFullYear()).filter(function(x) {
-      var d = new Date(x.data + 'T12:00:00');
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
-    var total = cvmTotalV(vs), rec = cvmTotalRec(vs);
-    var com = cvmCalcComissao(rec, meta);
-    var pct = meta > 0 ? Math.min(Math.round(total / meta * 100), 100) : 0;
-
-    html += '<div class="ccvm-adm-user">'
-      + '<div class="ccvm-adm-user-hd"><div class="ccvm-adm-user-name">' + v.nome + '</div>'
-      + '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:' + com.nivel.cor + '22;color:' + com.nivel.cor + '">' + com.nivel.label + '</span></div>'
-      + '<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px;">'
-      + '<div style="flex:1;"><label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px;">Meta de Volume (R$)</label>'
-      + '<input type="number" id="cvadm-meta-' + v.id + '" value="' + (meta || '') + '" placeholder="Ex: 80000" style="width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;"></div>'
-      + '<button class="btn btn-primary btn-sm" onclick="cvmAdmSalvarMeta(\'' + v.id + '\')">Salvar</button></div>'
-      + '<div class="ccvm-adm-bar-bg"><div class="ccvm-adm-bar-fill" style="width:' + pct + '%;"></div></div>'
-      + '<div class="ccvm-adm-stats">'
-      + '<div class="ccvm-adm-stat"><div class="ccvm-adm-stat-lbl">Realizado</div><div class="ccvm-adm-stat-val">' + cvmFmt(total, true) + '</div></div>'
-      + '<div class="ccvm-adm-stat"><div class="ccvm-adm-stat-lbl">Receita</div><div class="ccvm-adm-stat-val" style="color:var(--teal)">' + cvmFmt(rec, true) + '</div></div>'
-      + '<div class="ccvm-adm-stat"><div class="ccvm-adm-stat-lbl">% Meta</div><div class="ccvm-adm-stat-val">' + pct + '%</div></div>'
-      + '<div class="ccvm-adm-stat"><div class="ccvm-adm-stat-lbl">Comissao</div><div class="ccvm-adm-stat-val" style="color:var(--mint)">' + cvmFmt(com.bolso, true) + '</div></div>'
-      + '</div></div>';
+// \u2500\u2500 ADMIN \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function cvmRenderAdmin(leads) {
+  var vends=(allVendedores||[]).filter(function(v){return v.status==='ativo'||!v.status;});
+  var now=new Date();
+  var tTotal=vends.reduce(function(a,v){return a+cvmLeadsVendedor(leads,v.id).reduce(function(b,l){return b+(parseFloat(l.valor_estimado)||0);},0);},0);
+  var tMeta=vends.reduce(function(a,v){return a+cvmGetMeta(v.id);},0);
+  var pctGeral=tMeta>0?Math.round(tTotal/tMeta*100):0;
+  var html='<div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;color:var(--navy);margin-bottom:4px;">Gestao de Metas \u2014 '+CVM_MESES_PT[now.getMonth()]+'</div>'
+    +'<div class="kpi-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">'
+    +'<div class="kpi-card"><div class="kpi-val" style="font-size:18px;color:var(--teal);">'+cvmFmt(tTotal,true)+'</div><div class="kpi-label">Volume Total Equipe</div></div>'
+    +'<div class="kpi-card"><div class="kpi-val" style="font-size:18px;">'+cvmFmt(tMeta,true)+'</div><div class="kpi-label">Meta Coletiva</div></div>'
+    +'<div class="kpi-card"><div class="kpi-val" style="font-size:18px;color:'+(pctGeral>=100?'var(--mint)':'var(--orange)')+';">'+pctGeral+'%</div><div class="kpi-label">% Meta Coletiva</div></div></div>'
+    +'<div class="ccvm-alert-warn" style="margin-bottom:14px;">As metas aqui sao de volume bruto para calculo de comissao. As vendas sao os leads com etapa Venda OK no Supabase.</div>';
+  vends.forEach(function(v){
+    var vl=cvmLeadsVendedor(leads,v.id);
+    var total=vl.reduce(function(a,l){return a+(parseFloat(l.valor_estimado)||0);},0);
+    var rec=vl.reduce(function(a,l){return a+cvmLeadReceita(l);},0);
+    var meta=cvmGetMeta(v.id);
+    var com=cvmCalcComissao(rec,meta);
+    var pct=meta>0?Math.min(Math.round(total/meta*100),100):0;
+    var now2=new Date();
+    html+='<div class="ccvm-adm-user"><div class="ccvm-adm-user-hd">'
+      +'<div class="ccvm-adm-user-name">'+v.nome+'</div>'
+      +'<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:'+com.nivel.cor+'22;color:'+com.nivel.cor+'">'+com.nivel.label+'</span></div>'
+      +'<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px;">'
+      +'<div style="flex:1;"><label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px;">Meta Volume (R$)</label>'
+      +'<input type="number" id="cvadm-meta-'+v.id+'" value="'+(meta||'')+'" placeholder="Ex: 235215" style="width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;"></div>'
+      +'<button class="btn btn-primary btn-sm" data-vid="'+v.id+'" onclick="cvmAdmSalvarMeta(this.getAttribute(\x27data-vid\x27))">Salvar</button></div>'
+      +'<div class="ccvm-adm-bar-bg"><div class="ccvm-adm-bar-fill" style="width:'+pct+'%;"></div></div>'
+      +'<div class="ccvm-adm-stats">'
+      +'<div class="ccvm-adm-stat"><div class="ccvm-adm-stat-lbl">Realizado</div><div class="ccvm-adm-stat-val">'+cvmFmt(total,true)+'</div></div>'
+      +'<div class="ccvm-adm-stat"><div class="ccvm-adm-stat-lbl">Receita</div><div class="ccvm-adm-stat-val" style="color:var(--teal)">'+cvmFmt(rec,true)+'</div></div>'
+      +'<div class="ccvm-adm-stat"><div class="ccvm-adm-stat-lbl">% Meta</div><div class="ccvm-adm-stat-val">'+pct+'%</div></div>'
+      +'<div class="ccvm-adm-stat"><div class="ccvm-adm-stat-lbl">Comissao</div><div class="ccvm-adm-stat-val" style="color:var(--mint)">'+cvmFmt(com.bolso,true)+'</div></div>'
+      +'</div></div>';
   });
-
-  document.getElementById('ccvm-admin').innerHTML = html;
+  document.getElementById('ccvm-admin').innerHTML=html;
+}
+function cvmAdmSalvarMeta(uid){
+  var val=parseFloat(document.getElementById('cvadm-meta-'+uid).value);
+  if(!val||val<=0){toast('Meta invalida!','error');return;}
+  cvmSetMeta(uid,val);
+  toast('Meta salva!','success');
+  cvmCarregarLeads(true).then(function(leads){cvmRenderAdmin(leads);});
 }
 
-function cvmAdmSalvarMeta(uid) {
-  var val = parseFloat(document.getElementById('cvadm-meta-' + uid).value);
-  if (!val || val <= 0) { toast('Meta invalida!', 'error'); return; }
-  cvmSetMeta(uid, val);
-  toast('Meta salva!', 'success');
-  cvmRenderAdmin();
-  if (uid === currentUser.id) { cvmRenderMeta(); cvmRenderComissao(); cvmRenderSim(); }
-}
-
-// \u2500\u2500 MODAL NOVA VENDA \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-function cvmOpenVenda() {
-  var hoje = new Date().toISOString().split('T')[0];
-  document.getElementById('cvm-m-nome').value = '';
-  document.getElementById('cvm-m-valor').value = '';
-  document.getElementById('cvm-m-dest').value = '';
-  document.getElementById('cvm-m-data').value = hoje;
-  document.getElementById('cvm-m-rent').value = 9;
-  document.getElementById('cvm-rent-val').textContent = '9%';
-  document.getElementById('cvm-rent-receita').textContent = 'R$ 0';
-  document.getElementById('cvm-m-pgto').value = 'PIX';
-  document.getElementById('ov-cvmvenda').classList.add('open');
-  setTimeout(function() { document.getElementById('cvm-m-nome').focus(); }, 300);
-}
-function cvmCloseVenda() {
-  document.getElementById('ov-cvmvenda').classList.remove('open');
-}
-function cvmUpdateRent() {
-  var val = parseFloat(document.getElementById('cvm-m-valor').value) || 0;
-  var rent = parseFloat(document.getElementById('cvm-m-rent').value) || 9;
-  document.getElementById('cvm-rent-val').textContent = rent + '%';
-  document.getElementById('cvm-rent-receita').textContent = cvmFmt(val * (rent / 100));
-}
-function cvmSalvarVenda() {
-  var nome = (document.getElementById('cvm-m-nome').value || '').trim();
-  var valor = parseFloat(document.getElementById('cvm-m-valor').value);
-  var data = document.getElementById('cvm-m-data').value;
-  var rent = parseFloat(document.getElementById('cvm-m-rent').value) || 9;
-  var dest = (document.getElementById('cvm-m-dest').value || '').trim();
-  var pgto = document.getElementById('cvm-m-pgto').value;
-  if (!nome) { toast('Informe o nome do cliente!', 'error'); return; }
-  if (!valor || valor <= 0) { toast('Informe um valor valido!', 'error'); return; }
-  if (!data) { toast('Informe a data!', 'error'); return; }
-  var receita = Math.round(valor * (rent / 100));
-  var d = new Date(data + 'T12:00:00');
-  var m = d.getMonth(), a = d.getFullYear();
-  var vs = cvmGetVendas(currentUser.id, m, a);
-  vs.push({ id: cvmGenId(), nome: nome, valor: valor, receita: receita, rent: rent, data: data, dest: dest, pgto: pgto });
-  cvmSetVendas(currentUser.id, vs, m, a);
-  cvmCloseVenda();
-  toast('Venda lancada!', 'success');
-  cvmRenderMeta();
-  cvmRenderComissao();
-  cvmRenderVendas();
-  if (currentUser._isManager) { cvmRenderRanking(); cvmRenderAdmin(); }
-}
-
-// loadComissoes chamado direto no showView
-
-
-// Aplica todas as metas do mes de uma vez (para o admin)
-function cvmSeedMetasMes() {
-  var now = new Date();
-  var m = now.getMonth(), a = now.getFullYear();
-  var key = m + '_' + a;
-  var tabela = CVM_METAS_FIXAS[key];
-  if (!tabela) { toast('Sem metas definidas para este mes no sistema.', 'error'); return; }
-  var vends = (allVendedores || []).filter(function(v) { return v.status === 'ativo' || !v.status; });
-  var count = 0;
-  vends.forEach(function(v) {
-    var meta = cvmGetMetaPorNome(v.nome, m, a);
-    if (meta > 0) {
-      cvmLs('cvmeta_' + v.id + '_' + m + '_' + a, meta);
-      count++;
-    }
-  });
-  toast('Metas aplicadas para ' + count + ' consultores!', 'success');
-  cvmRenderAdmin();
-}
 </script>
 
-<!-- MODAL NOVA VENDA CVM COMISSOES -->
-<div id="ov-cvmvenda" onclick="if(event.target===this)cvmCloseVenda()">
-  <div class="ccvm-modal">
-    <div class="ccvm-modal-handle"></div>
-    <div class="ccvm-modal-title">+ Nova Venda</div>
-    <div class="fgroup" style="margin-bottom:12px;">
-      <label>Nome do cliente *</label>
-      <input type="text" id="cvm-m-nome" placeholder="Ex: Maria da Silva"/>
+<!-- MODAL NOVA VENDA CVM - RENTABILIDADE -->
+<div id="ov-cvmrent" onclick="if(event.target===this)document.getElementById('ov-cvmrent').classList.remove('open')" style="position:fixed;inset:0;background:rgba(10,20,50,.45);backdrop-filter:blur(4px);z-index:400;display:none;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:18px;width:400px;max-width:95vw;padding:24px;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+    <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--navy);margin-bottom:4px;">Informar Rentabilidade</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Esta informacao melhora o calculo de comissao.</div>
+    <div class="fgroup" style="margin-bottom:16px;">
+      <label>Rentabilidade desta venda (%)</label>
+      <input type="number" id="cvm-rent-input" min="8" max="14" step="0.5" value="9" style="font-size:18px;"/>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">A rentabilidade padrao e 9% quando nao informada.</div>
     </div>
-    <div class="form-row" style="margin-bottom:12px;">
-      <div class="fgroup">
-        <label>Valor bruto (R$) *</label>
-        <input type="number" id="cvm-m-valor" placeholder="Ex: 10000" min="1" oninput="cvmUpdateRent()" inputmode="decimal"/>
-      </div>
-      <div class="fgroup">
-        <label>Data da venda *</label>
-        <input type="date" id="cvm-m-data"/>
-      </div>
-    </div>
-    <div class="fgroup" style="margin-bottom:12px;">
-      <label>Rentabilidade: <span id="cvm-rent-val" style="color:var(--teal);font-weight:700;">9%</span></label>
-      <input type="range" class="ccvm-sim-range" id="cvm-m-rent" min="8" max="14" value="9" step="0.5" oninput="cvmUpdateRent()"/>
-      <div class="ccvm-rent-track"><span>8% (min)</span><span>11%</span><span>14% (max)</span></div>
-      <div class="ccvm-rent-preview">
-        <div class="ccvm-rent-preview-lbl">Receita gerada para a loja</div>
-        <div class="ccvm-rent-preview-val" id="cvm-rent-receita">R$ 0</div>
-      </div>
-    </div>
-    <div class="form-row" style="margin-bottom:12px;">
-      <div class="fgroup">
-        <label>Destino</label>
-        <input type="text" id="cvm-m-dest" placeholder="Ex: Cancun, Orlando..."/>
-      </div>
-      <div class="fgroup">
-        <label>Forma de Pagamento</label>
-        <select id="cvm-m-pgto">
-          <option>PIX</option>
-          <option>Cartao de Credito</option>
-          <option>Parcelado</option>
-          <option>Boleto</option>
-          <option>Debito</option>
-          <option>Transferencia</option>
-        </select>
-      </div>
-    </div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;font-size:15px;" onclick="cvmSalvarVenda()">Confirmar Venda</button>
-    <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px;" onclick="cvmCloseVenda()">Cancelar</button>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="document.getElementById('ov-cvmrent').classList.remove('open')">OK</button>
   </div>
 </div>
+
 </body>
 </html>
